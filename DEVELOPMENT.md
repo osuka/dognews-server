@@ -266,3 +266,46 @@ sqlite> select * from auth_user;
 
 Password change is done through `http://localhost:8181/admin/password_change` in the admin console, that has the typical 'type previous' etc.
 
+## Creating the models
+
+We have already defined models in the react API and news-extractor applications, now we just migrate them to django-style. I continue the [rest framework tutorials](https://www.django-rest-framework.org/tutorial/1-serialization/)
+
+An excerpt from sample model from the tutorial:
+
+```python
+class Snippet(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    title = models.CharField(max_length=100, blank=True, default='')
+    code = models.TextField()
+    linenos = models.BooleanField(default=False)
+    ...
+    class Meta:
+        ordering = ['created']
+```
+
+Some notes:
+
+* blank=True defines a field as not required
+* for dates, we set default=django.admin.timezone.now - this sets the correct now() field on save, using datetime.now() would just store the one at launch time
+* need to add to INSTALLED_APPS 'restapi' so it loads our models
+* the n to m relation between news item and its ratings is defined in ratings with a FK field: `newsItem = models.ForeignKey(NewsItem, on_delete=models.CASCADE)` (no other reference is needed)
+
+## Creating admin pages
+
+```python
+class NewsItemRatingInline(admin.StackedInline):
+    model = NewsItemRating
+    min_num = 0
+    extra = 0  # determines number of empty elements for new objects
+
+
+@admin.register(NewsItem)
+class NewsItemAdmin(admin.ModelAdmin):
+    inlines = [
+        NewsItemRatingInline
+    ]
+```
+
+* without extra = 0 it creates 3 empty objects in the form (this is in InlineModelAdmin, where it declares extra = 3 god knows why)
+
+
