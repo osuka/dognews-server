@@ -7,7 +7,7 @@ class NewsItem(models.Model):
     # note: blank=True --> field is not required in forms
 
     # mandatory fields
-    url = models.CharField(max_length=250, primary_key=True)
+    target_url = models.CharField(max_length=250, unique=True)
     date = models.DateTimeField(default=django.utils.timezone.now)
     title = models.CharField(max_length=250)
     source = models.CharField(max_length=80)

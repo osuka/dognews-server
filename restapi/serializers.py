@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User, Group
+from .models import NewsItem
 from rest_framework import serializers
 
 
@@ -12,3 +13,10 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Group
         fields = ['url', 'name']
+
+
+class NewsItemSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = NewsItem
+        exclude = []
+        # fields = ['url', 'name']

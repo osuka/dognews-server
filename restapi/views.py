@@ -1,7 +1,8 @@
-from django.shortcuts import render
 from django.contrib.auth.models import User, Group
+from .models import NewsItem
 from rest_framework import viewsets
-from restapi.serializers import UserSerializer, GroupSerializer
+from restapi.serializers import UserSerializer, GroupSerializer, \
+    NewsItemSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -18,3 +19,11 @@ class GroupViewSet(viewsets.ModelViewSet):
     """
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
+
+
+class NewsItemViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows groups to be viewed or edited.
+    """
+    queryset = NewsItem.objects.all()
+    serializer_class = NewsItemSerializer

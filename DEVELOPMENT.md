@@ -290,6 +290,16 @@ Some notes:
 * need to add to INSTALLED_APPS 'restapi' so it loads our models
 * the n to m relation between news item and its ratings is defined in ratings with a FK field: `newsItem = models.ForeignKey(NewsItem, on_delete=models.CASCADE)` (no other reference is needed)
 
+To generate the tables:
+
+```bash
+-> % python manage.py makemigrations restapi
+Migrations for 'restapi':
+  restapi/migrations/0001_initial.py
+    - Create model NewsItem
+    - Create model NewsItemRating
+```
+
 ## Creating admin pages
 
 ```python
