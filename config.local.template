@@ -1,0 +1,10 @@
+# credentials needed for the various scripts
+# copy this file to config.local.sh (doesn't go into version control)
+
+TARGET_HOST=<your host name>
+TARGET_USER=<the user used to connect to that host>
+TARGET_FOLDER=<the absolute path in that host where to install the server>
+
+SUPERUSER_NAME=<short name for the user in django, typically 'admin'>
+SUPERUSER_EMAIL=<email address, helps with password resets/notifications>
+

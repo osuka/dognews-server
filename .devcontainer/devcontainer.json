@@ -1,0 +1,24 @@
+{
+	"name": "Remote computer",
+	"context": ".",
+	"dockerFile": "Dockerfile",
+	"runArgs": [
+		"-v","/var/run/docker.sock:/var/run/docker.sock"
+	],
+	"postCreateCommand": "bash scripts/install-dev-tools.sh",
+	"extensions": [
+		"dbaeumer.vscode-eslint",
+		"nathanridley.autotrim",
+		"deerawan.vscode-dash",
+		"ms-azuretools.vscode-docker",
+		"joelday.docthis",
+		"eamodio.gitlens",
+		"davidanson.vscode-markdownlint",
+		"jebbs.plantuml",
+		"humao.rest-client",
+		"dotjoshjohnson.xml",
+    "msjsdiag.vscode-react-native",
+		"ms-python.python",
+		"alexcvzz.vscode-sqlite"
+	]
+}

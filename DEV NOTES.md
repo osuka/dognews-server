@@ -1,6 +1,7 @@
 # Development notes
 
-Some notes on this project. Most of this comes from following the [official tutorial](https://docs.djangoproject.com/en/2.2/intro/tutorial01/)
+> Some notes I took while creating this project - nothing fancy but may help troubleshooting
+> Most of this comes from following the [official tutorial](https://docs.djangoproject.com/en/2.2/intro/tutorial01/)
 
 ## Initial project creation
 
@@ -144,10 +145,10 @@ Most tables are empty except django_migrations which logs what has already happe
 ### Create the initial superuser
 
 ```bash
-python manage.py createsuperuser --email admin@xxxxxxx.com --username adminz
+python manage.py createsuperuser --email admin@xxxxxxx.com --username XXXXX
 ```
 
-Changing the default name just because.  Ff3MLujytDMukXHSSU8r
+Changing the default name just because.
 
 ### Create default serializers
 
