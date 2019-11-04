@@ -6,9 +6,13 @@
 # * Installs local versions of python and openssl
 # * Creates a venv
 # * Runs all django migrations
+# * Creates a passenger_wsgi.py file
 #
 # I use it for Dreamhost for very cheap Django hosting, should
 # work in any shared hosting that provides local ssh access
+#
+# Requirements: a domain or subdomain created in Dreamhost's
+# panel with passenger support (or a similar setup)
 # ============================================================
 
 PYTHON_VERSION=3.7.3
@@ -89,6 +93,26 @@ EOL
   # echo "export PATH=$HOME/opt/python/bin:"'$PATH' >>~/.bash_profile
 }
 
+function create_passenger_configuration() {
+  # See https://help.dreamhost.com/hc/en-us/articles/215769548-Passenger-and-Python-WSGI
+  # Dreamhost's passenger configuration requires a custom entry point that
+  # switches python interpreters
+
+  ssh ${TARGET_USER}@${TARGET_HOST} "cat >${TARGET_FOLDER}/passenger_wsgi.py" <<EOL
+import sys
+import os
+from django.core.wsgi import get_wsgi_application
+INTERP = "${TARGET_FOLDER}/venv/bin/python3"
+# INTERP is present twice so that the new Python interpreter knows
+# the actual executable path
+if sys.executable != INTERP:
+    os.execl(INTERP, INTERP, *sys.argv)
+# the rest of this file is the standard django wsgi.py
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dognews.settings')
+application = get_wsgi_application()
+EOL
+}
+
 # ------------------------------------------------------------------------
 # INSTALL DEPENDENCIES (IF NEEDED), COPY NEW SOURCE, RUN DJANGO MIGRATIONS
 # ------------------------------------------------------------------------
@@ -123,9 +147,15 @@ ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activa
 echo "* Run django migrations"
 ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; python3 manage.py migrate"
 
+echo "* Run django collectstatic (files go in ${TARGET_FOLDER}/public as per Passenger)"
+ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; python3 manage.py collectstatic"
+
 echo "* Check superuser"
 EXISTS_SUPER_USER=`ssh ${TARGET_USER}@${TARGET_HOST} sqlite3 "${TARGET_FOLDER}/db.sqlite3" "'select username from auth_user where username=\"${SUPERUSER_NAME}\" and is_superuser=1'"`
 if [[ "${EXISTS_SUPER_USER}" != "adminz" ]]; then
   echo "* Creating superuser ${SUPERUSER_NAME}: please enter password"
   ssh -t ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; python manage.py createsuperuser --email ${SUPERUSER_EMAIL} --username ${SUPERUSER_NAME}"
 fi
+
+echo "* Create passenger wsgi configuration"
+create_passenger_configuration

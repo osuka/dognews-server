@@ -25,7 +25,7 @@ SECRET_KEY = 'af$r(dvh48ui1vku&sakegtr6vny5)hi6f^odamhr_fwkq!v=m'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.1.149']
+ALLOWED_HOSTS = ['192.168.1.149', 'dognewsserver.gatillos.com']
 
 
 # Application definition
@@ -119,8 +119,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
-STATIC_URL = '/static/'
-
+STATIC_URL = '/public/'
+STATIC_ROOT = 'public/'
 
 # Rest framework
 
