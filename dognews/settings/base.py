@@ -119,14 +119,19 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
-STATIC_URL = '/public/'
-STATIC_ROOT = 'public/'
+STATIC_URL = '/static/'
+STATIC_ROOT = 'public/static/'
 
 # Rest framework
 
-# enable pagination
 REST_FRAMEWORK = {
+    # enable pagination
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    # make default permissions to require auth
+    #'DEFAULT_PERMISSION_CLASSES': 'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'PAGE_SIZE': 10
 }
 

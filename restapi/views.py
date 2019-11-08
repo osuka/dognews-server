@@ -23,7 +23,7 @@ class GroupViewSet(viewsets.ModelViewSet):
 
 class NewsItemViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows groups to be viewed or edited.
+    API endpoint that allows queued news items to be viewed or edited.
     """
     queryset = NewsItem.objects.all()
     serializer_class = NewsItemSerializer

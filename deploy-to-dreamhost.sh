@@ -17,6 +17,7 @@
 
 PYTHON_VERSION=3.7.3
 OPENSSL_VERSION=1.1.1
+REMOTE_DJANGO_SETTINGS_MODULE=dognews.settings.dreamhost
 
 function check_configuration() {
   . ./config.local.sh
@@ -108,9 +109,10 @@ INTERP = "${TARGET_FOLDER}/venv/bin/python3"
 if sys.executable != INTERP:
     os.execl(INTERP, INTERP, *sys.argv)
 # the rest of this file is the standard django wsgi.py
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dognews.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dognews.settings.dreamhost')
 application = get_wsgi_application()
 EOL
+# note that REMOTE_DJANGO_SETTINGS_MODULE is replicated above
 }
 
 # ------------------------------------------------------------------------
@@ -145,17 +147,17 @@ echo "* Check dependencies"
 ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; pip install -r requirements.txt"
 
 echo "* Run django migrations"
-ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; python3 manage.py migrate"
+ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; export DJANGO_SETTINGS_MODULE=${REMOTE_DJANGO_SETTINGS_MODULE}; python3 manage.py migrate"
 
 echo "* Run django collectstatic (files go in ${TARGET_FOLDER}/public as per Passenger)"
-ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; python3 manage.py collectstatic"
+ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; export DJANGO_SETTINGS_MODULE=${REMOTE_DJANGO_SETTINGS_MODULE}; python3 manage.py collectstatic --noinput"
 
-echo "* Check superuser"
-EXISTS_SUPER_USER=`ssh ${TARGET_USER}@${TARGET_HOST} sqlite3 "${TARGET_FOLDER}/db.sqlite3" "'select username from auth_user where username=\"${SUPERUSER_NAME}\" and is_superuser=1'"`
-if [[ "${EXISTS_SUPER_USER}" != "adminz" ]]; then
-  echo "* Creating superuser ${SUPERUSER_NAME}: please enter password"
-  ssh -t ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; python manage.py createsuperuser --email ${SUPERUSER_EMAIL} --username ${SUPERUSER_NAME}"
-fi
+# echo "* Check superuser"
+# EXISTS_SUPER_USER=`ssh ${TARGET_USER}@${TARGET_HOST} sqlite3 "${TARGET_FOLDER}/db.sqlite3" "'select username from auth_user where username=\"${SUPERUSER_NAME}\" and is_superuser=1'"`
+# if [[ "${EXISTS_SUPER_USER}" != "adminz" ]]; then
+#   echo "* Creating superuser ${SUPERUSER_NAME}: please enter password"
+#   ssh -t ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; python manage.py createsuperuser --email ${SUPERUSER_EMAIL} --username ${SUPERUSER_NAME}"
+# fi
 
 echo "* Create passenger wsgi configuration"
 create_passenger_configuration
