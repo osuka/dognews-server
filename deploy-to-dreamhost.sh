@@ -5,6 +5,7 @@
 #
 # * Installs local versions of python and openssl
 # * Creates a venv
+# * Installs dependecies for th environment (eg mysql)
 # * Runs all django migrations
 # * Creates a passenger_wsgi.py file
 #
@@ -17,7 +18,8 @@
 
 PYTHON_VERSION=3.7.3
 OPENSSL_VERSION=1.1.1
-REMOTE_DJANGO_SETTINGS_MODULE=dognews.settings.dreamhost
+ENVIRONMENT=dreamhost
+
 
 function check_configuration() {
   . ./config.local.sh
@@ -109,10 +111,9 @@ INTERP = "${TARGET_FOLDER}/venv/bin/python3"
 if sys.executable != INTERP:
     os.execl(INTERP, INTERP, *sys.argv)
 # the rest of this file is the standard django wsgi.py
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dognews.settings.dreamhost')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dognews.settings.${ENVIRONMENT}')
 application = get_wsgi_application()
 EOL
-# note that REMOTE_DJANGO_SETTINGS_MODULE is replicated above
 }
 
 # ------------------------------------------------------------------------
@@ -122,7 +123,7 @@ EOL
 check_configuration
 
 echo "* Update project source"
-rsync --progress -r --size-only --exclude __pycache__ dognews restapi manage.py requirements.txt "${TARGET_USER}@${TARGET_HOST}:${TARGET_FOLDER}"/
+rsync --progress -r --size-only --exclude __pycache__ dognews restapi manage.py requirements.txt requirements.${ENVIRONMENT}.txt "${TARGET_USER}@${TARGET_HOST}:${TARGET_FOLDER}"/
 
 echo "* Check openssl"
 INSTALLED_SSL_VERSIONS=`ssh ${TARGET_USER}@${TARGET_HOST} readelf -V -W ${TARGET_FOLDER}/openssl/lib/libssl.so|grep 'Name:'|grep OPENSSL|sed 's/_/./g'`
@@ -144,20 +145,22 @@ if [[ "${INSTALLED_VENV}" != "ok" ]]; then
 fi
 
 echo "* Check dependencies"
-ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; pip install -r requirements.txt"
+ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; pip install -r requirements.txt -r requirements.dreamhost.txt"
 
 echo "* Run django migrations"
-ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; export DJANGO_SETTINGS_MODULE=${REMOTE_DJANGO_SETTINGS_MODULE}; python3 manage.py migrate"
+ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; export DJANGO_SETTINGS_MODULE=dognews.settings.${ENVIRONMENT}; python3 manage.py migrate"
 
 echo "* Run django collectstatic (files go in ${TARGET_FOLDER}/public as per Passenger)"
-ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; export DJANGO_SETTINGS_MODULE=${REMOTE_DJANGO_SETTINGS_MODULE}; python3 manage.py collectstatic --noinput"
+ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; export DJANGO_SETTINGS_MODULE=dognews.settings.${ENVIRONMENT}; python3 manage.py collectstatic --noinput"
 
-# echo "* Check superuser"
-# EXISTS_SUPER_USER=`ssh ${TARGET_USER}@${TARGET_HOST} sqlite3 "${TARGET_FOLDER}/db.sqlite3" "'select username from auth_user where username=\"${SUPERUSER_NAME}\" and is_superuser=1'"`
-# if [[ "${EXISTS_SUPER_USER}" != "adminz" ]]; then
-#   echo "* Creating superuser ${SUPERUSER_NAME}: please enter password"
-#   ssh -t ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; python manage.py createsuperuser --email ${SUPERUSER_EMAIL} --username ${SUPERUSER_NAME}"
-# fi
+echo "* Check superuser is present"
+if [[ "${ENVIRONMENT}" == "local" ]]; then
+  EXISTS_SUPER_USER=`ssh ${TARGET_USER}@${TARGET_HOST} sqlite3 "${TARGET_FOLDER}/db.sqlite3" "'select username from auth_user where username=\"${SUPERUSER_NAME}\" and is_superuser=1'"`
+  if [[ "${EXISTS_SUPER_USER}" != "adminz" ]]; then
+    echo "* Creating superuser ${SUPERUSER_NAME}: please enter password"
+    ssh -t ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./venv/bin/activate; python manage.py createsuperuser --email ${SUPERUSER_EMAIL} --username ${SUPERUSER_NAME}"
+  fi
+fi
 
 echo "* Create passenger wsgi configuration"
 create_passenger_configuration

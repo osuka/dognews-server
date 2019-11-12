@@ -1,0 +1,36 @@
+# NOTE:
+#   This file can be used to send requests directly from
+#   Visual Studio Code. All you need to do is install
+#   teh "REST Client" addon (by Huachao Mao) and then open
+#   this file.
+
+#   It will add 'Send Request' buttons and a side window
+#   to display results. You can edit, modify etc.
+
+#   Documentation:
+#   https://github.com/Huachao/vscode-restclient
+
+###
+
+@server=127.0.0.1:8000
+@user=adminz
+@passwd=XXXXXXXXXXXXXXXXX
+
+###
+
+GET http://{{server}}/newsItem/
+content-type: application/json
+Authorization: Basic {{user}} {{passwd}}
+
+###
+
+POST http://{{server}}/newsItem/
+content-type: application/json
+Authorization: Basic {{user}} {{passwd}}
+
+{
+  "target_url": "https://google.com"
+}
+
+
+###

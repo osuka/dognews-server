@@ -1,0 +1,2 @@
+# needs package libmysqlclient-dev installed in the host system
+mysqlclient>=1.4
