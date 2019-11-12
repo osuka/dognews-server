@@ -3,3 +3,5 @@ __pycache__/
 config.local.sh
 .ropeproject
 dognews/settings/dreamhost.py
+public/admin
+public/rest_framework
