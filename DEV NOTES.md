@@ -267,6 +267,12 @@ sqlite> select * from auth_user;
 
 Password change is done through `http://localhost:8181/admin/password_change` in the admin console, that has the typical 'type previous' etc.
 
+## Run development server
+
+```
+python manage.py runserver
+```
+
 ## Creating the models
 
 We have already defined models in the react API and news-extractor applications, now we just migrate them to django-style. I continue the [rest framework tutorials](https://www.django-rest-framework.org/tutorial/1-serialization/)
@@ -320,3 +326,32 @@ class NewsItemAdmin(admin.ModelAdmin):
 * without extra = 0 it creates 3 empty objects in the form (this is in InlineModelAdmin, where it declares extra = 3 god knows why)
 
 
+## Creating per-environment configuration
+
+I have currently three needs: local, dreamhost and test
+
+Created:
+
+* requirements.txt (common)
+* requirements.dreamhost.txt
+* requirements.test.txt
+* module dognews.settings
+  * base.py (common)
+  * dreamhost.py (imports base, extends)
+  * local.py
+  * test.py
+
+Launch with settings:
+
+```sh
+export DJANGO_SETTINGS_MODULE=dognews.settings.local
+python manage.py runserver
+```
+
+## Run a shell inside django
+
+```sh
+python manage.py shell
+```
+
+Then you can import models, list, create etc
