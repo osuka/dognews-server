@@ -33,9 +33,6 @@ RUN mkdir "${NVM_DIR}" && \
   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
 RUN chown -R ${THEUSER} "${NVM_DIR}"
 
-# for python dependencies (normal ones can be installed from requirements.txt manually)
-RUN pip install pylint
-
 # Switch back to dialog for any ad-hoc use of apt-get
 ENV DEBIAN_FRONTEND=dialog
 
