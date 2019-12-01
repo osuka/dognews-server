@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',        # <-- added, to expose rest api
     'restapi',   # <-- so it loads our models
+    'drf_yasg',   # <-- live documentation
 ]
 
 MIDDLEWARE = [

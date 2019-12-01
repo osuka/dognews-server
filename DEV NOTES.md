@@ -328,6 +328,31 @@ class NewsItemAdmin(admin.ModelAdmin):
 * without extra = 0 it creates 3 empty objects in the form (this is in InlineModelAdmin, where it declares extra = 3 god knows why)
 
 
+## Generating documentation
+
+There are a few ways to go about this. One thing we can do is manually generate an OpenAPI Schema representation. This is a yaml document expressing all the exposed methods that we have
+
+```sh
+python manage.py generateschema > openapi-schema.yml
+```
+
+> A lot can be tweaked here, check [docs](https://www.django-rest-framework.org/api-guide/schemas/)
+
+There's tools that can consume that file and output various types of documentation pages.
+
+Since I'm using django rest framework I'll be using [drf-yasg](https://github.com/axnsan12/drf-yasg) that integrates nicely with it. With a couple of changes the documentation will appear 'magically':
+
+* Load drf_yasg as an application in settings.py
+* Create a schema_view in urls.py using its get_schema_view function
+* Expose the patterns we want for swagger json/yaml, swagger UI and/or redoc (alternative view)
+
+Exposed URLs are:
+
+* /swagger.json
+* /swagger.yaml
+* /swagger/
+* /redoc/
+
 ## Creating per-environment configuration
 
 I have currently three needs: local, dreamhost and test
