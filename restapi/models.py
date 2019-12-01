@@ -28,14 +28,12 @@ class NewsItem(models.Model):
     entity that has been reviewed and rated by users
     '''
 
-
     # mandatory fields
     target_url = models.CharField(max_length=250, unique=True)
     date = models.DateTimeField(default=django.utils.timezone.now)
     title = models.CharField(max_length=250)
     source = models.CharField(max_length=80)
     submitter = models.CharField(max_length=25)
-    # ratings = models.ManyToManyField('Rating', related_name='ratings', default=None, null=True)
 
     fetch_date = models.DateTimeField(default=django.utils.timezone.now)
 
@@ -57,7 +55,10 @@ class Rating(models.Model):
     '''
     Ratings given to an item from a user
     '''
-    newsItem = models.ForeignKey(NewsItem, on_delete=models.CASCADE)
+    # has a many to one link to a NewsItem
+    # this appears as a 'ratings' field in NewsItem instances that is called 'ratings'
+    newsItem = models.ForeignKey(NewsItem, blank=True, null=True,
+                                 related_name='ratings', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
     rating = models.IntegerField(default=0)
     date = models.DateTimeField(default=django.utils.timezone.now)

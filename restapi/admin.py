@@ -14,4 +14,5 @@ class NewsItemAdmin(admin.ModelAdmin):
     inlines = [
         RatingInline
     ]
+    exclude = [ 'ratings' ]
 

@@ -15,8 +15,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from django.urls import include, path
+from django.urls import include
 from rest_framework import routers
+from rest_framework_nested.routers import NestedDefaultRouter
 from restapi import views
 
 router = routers.DefaultRouter()
@@ -30,9 +31,16 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 ]
 
+# from https://github.com/alanjds/drf-nested-routers
+newsitem_router = NestedDefaultRouter(router, r'newsItem', lookup='newsItem')
+newsitem_router.register(r'ratings', views.RatingViewSet, base_name='newsItem-ratings')
+# 'base_name' is optional. Needed only if the same viewset is registered more than once
+# Official DRF docs on this option: http://www.django-rest-framework.org/api-guide/routers/
+
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns += [
     path('', include(router.urls)),
-    path('api-auth/', include('rest_framework.urls', namespace='rest_framework'))
+    path('', include(newsitem_router.urls)),
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 ]

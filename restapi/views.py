@@ -1,8 +1,10 @@
 from django.contrib.auth.models import User, Group
-from .models import NewsItem
+from .models import NewsItem, Rating
 from rest_framework import viewsets
+from rest_framework.response import Response
+
 from restapi.serializers import UserSerializer, GroupSerializer, \
-    NewsItemSerializer
+    NewsItemSerializer, RatingSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -27,3 +29,10 @@ class NewsItemViewSet(viewsets.ModelViewSet):
     """
     queryset = NewsItem.objects.all()
     serializer_class = NewsItemSerializer
+
+
+class RatingViewSet(viewsets.ModelViewSet):
+    serializer_class = RatingSerializer
+    def get_queryset(self):
+        return Rating.objects.filter(newsItem_id=self.kwargs['newsItem_pk'])
+

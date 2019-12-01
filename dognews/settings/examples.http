@@ -14,7 +14,7 @@
 
 @server=127.0.0.1:8000
 @user=adminz
-@passwd=XXXXXXXXXXXXXXXXX
+@passwd=XXXXXXXXXXXXXXXXXXXXXX
 
 ###
 
@@ -29,7 +29,39 @@ content-type: application/json
 Authorization: Basic {{user}} {{passwd}}
 
 {
-  "target_url": "https://google.com"
+  "target_url": "https://google.com",
+  "title": "this is a title",
+  "source": "examples.http",
+  "submitter": "vscode"
+}
+
+###
+
+GET http://{{server}}/newsItem/2/ratings/
+content-type: application/json
+Authorization: Basic {{user}} {{passwd}}
+
+
+###
+
+POST http://{{server}}/newsItem/2/ratings/
+content-type: application/json
+Authorization: Basic {{user}} {{passwd}}
+
+{
+  "rating": -2,
+  "user": 1
+}
+
+
+###
+
+PATCH http://{{server}}/newsItem/2/ratings/1/
+content-type: application/json
+Authorization: Basic {{user}} {{passwd}}
+
+{
+  "rating": -1
 }
 
 
