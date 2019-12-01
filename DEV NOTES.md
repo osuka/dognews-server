@@ -295,7 +295,9 @@ Some notes:
 * blank=True defines a field as not required
 * for dates, we set default=django.admin.timezone.now - this sets the correct now() field on save, using datetime.now() would just store the one at launch time
 * need to add to INSTALLED_APPS 'restapi' so it loads our models
-* the n to m relation between news item and its ratings is defined in ratings with a FK field: `newsItem = models.ForeignKey(NewsItem, on_delete=models.CASCADE)` (no other reference is needed)
+* the n to m relation between news item and its ratings is defined in ratings with a FK field: `newsItem = models.ForeignKey(NewsItem, on_delete=models.CASCADE)`
+* for embedded serialization (ie newsitem object includes a list of rating objects), simply generate a serializer for ratings and add it to the newsitem serializer as `ratings = RatingSerializer(many=True, required=False)`
+* to represent externally in a json API where you can update a rating directly with a patch, I'm using the python module `rest_framework_nested`, an extension to django rest framework: creating a new nested router inside urls.py for it and extending the serializer to work nicely with it
 
 To generate the tables:
 
