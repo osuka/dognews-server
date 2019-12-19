@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',        # <-- added, to expose rest api
+    'rest_framework.authtoken',   # enable token authentication
     'restapi',   # <-- so it loads our models
     'drf_yasg',   # <-- live documentation
 ]
@@ -137,6 +138,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',        
     ]
 }
-

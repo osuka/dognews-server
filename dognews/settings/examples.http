@@ -1,4 +1,4 @@
-# NOTE:
+http# NOTE:
 #   This file can be used to send requests directly from
 #   Visual Studio Code. All you need to do is install
 #   teh "REST Client" addon (by Huachao Mao) and then open
@@ -14,7 +14,23 @@
 
 @server=127.0.0.1:8000
 @user=adminz
-@passwd=XXXXXXXXXXXXXXXXXXXXXX
+@passwd=XXXXXXXXXXXXXXXXX
+
+###
+
+# @name login
+POST http://{{server}}/auth/login/
+content-type: application/json
+Authorization: Basic {{user}} {{passwd}}
+
+{
+  "username": "{{user}}",
+  "password": "{{passwd}}"
+}
+
+###
+
+@authToken = {{login.response.body.token}}
 
 ###
 
@@ -30,6 +46,20 @@ Authorization: Basic {{user}} {{passwd}}
 
 {
   "target_url": "https://google.com",
+  "title": "this is a title",
+  "source": "examples.http",
+  "submitter": "vscode"
+}
+
+###
+
+# same but using token authentication
+POST http://{{server}}/newsItem/
+content-type: application/json
+Authorization: Token {{authToken}}
+
+{
+  "target_url": "https://google.com/?q=test1",
   "title": "this is a title",
   "source": "examples.http",
   "submitter": "vscode"
