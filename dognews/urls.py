@@ -38,7 +38,7 @@ urlpatterns = [
 
 # from https://github.com/alanjds/drf-nested-routers
 newsitem_router = NestedDefaultRouter(router, r'newsItem', lookup='newsItem')
-newsitem_router.register(r'ratings', views.RatingViewSet, base_name='newsItem-ratings')
+newsitem_router.register(r'ratings', views.RatingViewSet, basename='newsItem-ratings')
 # 'base_name' is optional. Needed only if the same viewset is registered more than once
 # Official DRF docs on this option: http://www.django-rest-framework.org/api-guide/routers/
 
