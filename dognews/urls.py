@@ -18,36 +18,32 @@ from django.urls import path
 from django.urls import include
 from django.conf.urls import url
 from rest_framework import permissions
-from rest_framework import routers
-from rest_framework_nested.routers import NestedDefaultRouter
+from rest_framework.authtoken import views as authviews
+from rest_framework_extensions.routers import ExtendedDefaultRouter
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from rest_framework.authtoken import views as authviews
 from restapi import views
 
 
-router = routers.DefaultRouter()
+router = ExtendedDefaultRouter()
 router.register(r'users', views.UserViewSet)
 router.register(r'groups', views.GroupViewSet)
-router.register(r'newsItem', views.NewsItemViewSet)
-print(router.urls)
+router.register(r'newsItem', views.NewsItemViewSet).register(
+    r'ratings', views.NewsItemRatingViewSet, basename='newsItem-ratings',
+    parents_query_lookups=['newsItem_id'],
+)
+# the parent query lookups are part of the django extensions nested router
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 ]
 
-# from https://github.com/alanjds/drf-nested-routers
-newsitem_router = NestedDefaultRouter(router, r'newsItem', lookup='newsItem')
-newsitem_router.register(r'ratings', views.RatingViewSet, basename='newsItem-ratings')
-# 'base_name' is optional. Needed only if the same viewset is registered more than once
-# Official DRF docs on this option: http://www.django-rest-framework.org/api-guide/routers/
-
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns += [
     path('', include(router.urls)),
-    path('', include(newsitem_router.urls)),
-    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    path('api-auth/', include('rest_framework.urls',
+                              namespace='rest_framework')),
 ]
 
 schema_view = get_schema_view(

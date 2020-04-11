@@ -2,7 +2,7 @@ Django>=2
 djangorestframework>=3
 
 # needed for ratings nested model
-drf-nested-routers
+drf-extensions
 
 # needed for generation openapi schemas
 pyyaml

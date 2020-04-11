@@ -45,20 +45,20 @@ class NewsItem(models.Model):
     target_url = models.CharField(max_length=250, unique=True)
     date = models.DateTimeField(default=django.utils.timezone.now)
     title = models.CharField(max_length=250)
-    source = models.CharField(max_length=80)
+    source = models.CharField(max_length=250)
     submitter = models.CharField(max_length=25)
 
     fetch_date = models.DateTimeField(default=django.utils.timezone.now)
 
     # stubs for properties that come from OpenGraph
-    image = models.CharField(max_length=80, default=None, blank=True, null=True)
+    image = models.CharField(max_length=250, default=None, blank=True, null=True)
     type = models.CharField(max_length=50, default=None, blank=True, null=True)
 
     # calculated properties
     body = models.CharField(max_length=512, default=None, blank=True, null=True)
 
-    cached_page = models.CharField(max_length=80, default=None, blank=True, null=True)
-    thumbnail = models.CharField(max_length=80, default=None, blank=True, null=True)
+    cached_page = models.CharField(max_length=120, default=None, blank=True, null=True)
+    thumbnail = models.CharField(max_length=120, default=None, blank=True, null=True)
 
     summary = models.CharField(max_length=4096, default=None, blank=True, null=True)
     sentiment = models.CharField(max_length=20, default=None, blank=True, null=True)
@@ -72,7 +72,7 @@ class Rating(models.Model):
     # this appears as a 'ratings' field in NewsItem instances that is called 'ratings'
     newsItem = models.ForeignKey(NewsItem, blank=True, null=True,
                                  related_name='ratings', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
+    user = models.ForeignKey(User, null=True, on_delete=models.DO_NOTHING)
     rating = models.IntegerField(default=0)
     date = models.DateTimeField(default=django.utils.timezone.now)
 

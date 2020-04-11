@@ -25,6 +25,27 @@ class NewsItemTests(APITestCase):
         'title': 'new idea'
     }
 
+    sample_with_ratings_item_without_user = {
+        'target_url': 'https://www.google.com',
+        'source': 'newsitem_unit_test',
+        'submitter': 'pytest',
+        'title': 'new idea',
+        'ratings': [{
+            'rating': 1
+        }]
+    }
+
+    sample_with_ratings_item_with_user = {
+        'target_url': 'https://www.google.com',
+        'source': 'newsitem_unit_test',
+        'submitter': 'pytest',
+        'title': 'new idea',
+        'ratings': [{
+            'rating': 1,
+            'user': 'can_delete'
+        }]
+    }
+
     def setUp(self):
         self.groups = {}
         self.users = {}
@@ -32,6 +53,8 @@ class NewsItemTests(APITestCase):
             self.groups[perm], _ = Group.objects.get_or_create(name=f'new_group{perm}')
             self.groups[perm].permissions.add(*Permission.objects.filter(
                 content_type__model='newsitem', codename=f'{perm}_newsitem'))
+            self.groups[perm].permissions.add(*Permission.objects.filter(
+                content_type__model='rating', codename=f'{perm}_rating'))
             # ^ python note: star operator here unpacks the result into parameters
             self.users[perm] = User.objects.create_user(
                 username=f'can_{perm}', email=f'nothing@example.com', password=f'x{random()}X')
@@ -140,6 +163,7 @@ class NewsItemTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.as_user('change')
+        print(response.data)
         itemurl = response.data['url']
         response = self.client.patch(f'{itemurl}', {
             'target_url': 'https://googlito.com',
@@ -149,22 +173,40 @@ class NewsItemTests(APITestCase):
         self.assertEqual(NewsItem.objects.count(), 1)
         self.assertEqual(NewsItem.objects.get().target_url, 'https://googlito.com')
 
+    def test_can_add_item_with_ratings(self):
+        ''' Can add a rating if the user has 'change' permission
+        '''
+        self.as_user('add')
 
-    # def test_can_add_ratings(self):
-    #     ''' Can add a rating if the user has 'change' permission
-    #     '''
-    #     self.as_user('add')
-    #     response = self.client.post('/newsItem/', self.sample_minimal_item)
-    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # response = self.client.post('/newsItem/', self.sample_minimal_item)
+        response = self.client.post('/newsItem/', self.sample_with_ratings_item_without_user, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(NewsItem.objects.count(), 1)
+        item = NewsItem.objects.get()
+        self.assertIsNotNone(item.ratings.all()[0].user)
+        self.assertEqual(item.ratings.all()[0].user.username, 'can_add')
 
-    #     self.as_user('change')
-    #     itemurl = response.data['url']
-    #     response = self.client.put(f'{itemurl}ratings', {
-    #         # "user": self.users['change'].url,
-    #         "newsItem": itemurl,
-    #         "rating": 3
-    #     }, format='json')
-    #     # print(response.data)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(NewsItem.objects.count(), 1)
-    #     self.assertEqual(NewsItem.objects.get().target_url, 'https://googlito.com')
+    def test_can_add_ratings(self):
+        ''' Can add a rating if the user has 'change' permission
+        '''
+        self.as_user('add')
+
+        # response = self.client.post('/newsItem/', self.sample_minimal_item)
+        response = self.client.post('/newsItem/', self.sample_minimal_item, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(NewsItem.objects.count(), 1)
+        item = NewsItem.objects.get()
+        self.assertEqual(item.ratings.count(), 0)
+
+        itemurl = response.data['url']
+        response = self.client.post(f'{itemurl}ratings/', {
+            'rating': -1,
+        }, format='json')
+        print(response.request)
+        print(response.data)
+
+        self.assertEqual(NewsItem.objects.count(), 1)
+        item = NewsItem.objects.get()
+        self.assertIsNotNone(item.ratings)
+        self.assertEqual(item.ratings.all()[0].rating, -1)
+        self.assertEqual(item.ratings.all()[0].user.username, 'can_add')
