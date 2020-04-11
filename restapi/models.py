@@ -72,7 +72,7 @@ class Rating(models.Model):
     # this appears as a 'ratings' field in NewsItem instances that is called 'ratings'
     newsItem = models.ForeignKey(NewsItem, blank=True, null=True,
                                  related_name='ratings', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, null=True, on_delete=models.DO_NOTHING)
+    user = models.ForeignKey(User, null=False, on_delete=models.DO_NOTHING)
     rating = models.IntegerField(default=0)
     date = models.DateTimeField(default=django.utils.timezone.now)
 

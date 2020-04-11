@@ -38,6 +38,7 @@ class GroupSerializer(serializers.ModelSerializer):
 class RatingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rating
+        read_only_fields = ['user']
         exclude = []
 
 class NewsItemSerializer(NonNullModelSerializer, serializers.HyperlinkedModelSerializer):
@@ -55,7 +56,7 @@ class NewsItemSerializer(NonNullModelSerializer, serializers.HyperlinkedModelSer
         for rating_definition in ratings:
             rating_definition.newsItem = instance
             if 'user' not in rating_definition:
-                rating_definition.user = self.context['request'].user.pk
+                rating_definition['user'] = self.context['request'].user
             rating = Rating.objects.create(**rating_definition)
             instance.ratings.add(rating)
             instance.save()

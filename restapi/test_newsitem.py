@@ -174,39 +174,36 @@ class NewsItemTests(APITestCase):
         self.assertEqual(NewsItem.objects.get().target_url, 'https://googlito.com')
 
     def test_can_add_item_with_ratings(self):
-        ''' Can add a rating if the user has 'change' permission
+        ''' Can add a rating at the same time as a newsItem
         '''
         self.as_user('add')
 
-        # response = self.client.post('/newsItem/', self.sample_minimal_item)
         response = self.client.post('/newsItem/', self.sample_with_ratings_item_without_user, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(NewsItem.objects.count(), 1)
-        item = NewsItem.objects.get()
+
+        item = NewsItem.objects.get(target_url=self.sample_with_ratings_item_without_user['target_url'])
+        self.assertIsNotNone(item)
+        self.assertEqual(item.ratings.all()[0].rating, 1)
         self.assertIsNotNone(item.ratings.all()[0].user)
         self.assertEqual(item.ratings.all()[0].user.username, 'can_add')
 
     def test_can_add_ratings(self):
-        ''' Can add a rating if the user has 'change' permission
+        ''' Can add a rating to an existing news item
         '''
         self.as_user('add')
 
         # response = self.client.post('/newsItem/', self.sample_minimal_item)
         response = self.client.post('/newsItem/', self.sample_minimal_item, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(NewsItem.objects.count(), 1)
-        item = NewsItem.objects.get()
+
+        item = NewsItem.objects.get(target_url=self.sample_minimal_item['target_url'])
         self.assertEqual(item.ratings.count(), 0)
 
         itemurl = response.data['url']
         response = self.client.post(f'{itemurl}ratings/', {
             'rating': -1,
         }, format='json')
-        print(response.request)
-        print(response.data)
 
-        self.assertEqual(NewsItem.objects.count(), 1)
-        item = NewsItem.objects.get()
         self.assertIsNotNone(item.ratings)
         self.assertEqual(item.ratings.all()[0].rating, -1)
         self.assertEqual(item.ratings.all()[0].user.username, 'can_add')
