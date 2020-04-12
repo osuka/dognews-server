@@ -74,3 +74,7 @@ urlpatterns += [
 urlpatterns += [
     url(r'^auth/login', authviews.obtain_auth_token)
 ]
+
+admin.site.site_header = "Dog News"
+admin.site.site_title = "Dog News Admin Site"
+admin.site.index_title = "Welcome to the Dog News Server Administration Site"

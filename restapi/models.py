@@ -63,6 +63,21 @@ class NewsItem(models.Model):
     summary = models.CharField(max_length=4096, default=None, blank=True, null=True)
     sentiment = models.CharField(max_length=20, default=None, blank=True, null=True)
 
+    PUBLISHED = 'P'
+    DISCARDED = 'D'
+    PENDING = ''
+    PUBLICATION_STATES = [
+        (PUBLISHED, '✓'),
+        (DISCARDED, '☓'),
+        (PENDING, '⚬')
+    ]
+    publication_state = models.CharField(
+        max_length=1,
+        choices=PUBLICATION_STATES,
+        default=PENDING,
+        verbose_name='Status'
+    )
+
 
 class Rating(models.Model):
     '''
