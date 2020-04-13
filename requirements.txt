@@ -10,3 +10,6 @@ uritemplate
 
 # needed for live documentation of the api
 drf-yasg
+
+# parse urls
+tldextract
