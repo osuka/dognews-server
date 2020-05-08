@@ -6,12 +6,9 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('restapi', '0007_auto_20191112_1809'),
+        ("restapi", "0007_auto_20191112_1809"),
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='newsitem',
-            name='ratings',
-        ),
+        migrations.RemoveField(model_name="newsitem", name="ratings",),
     ]

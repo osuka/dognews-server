@@ -5,3 +5,4 @@ config.local.sh
 dognews/settings/dreamhost.py
 public/static
 .pytest_cache/
+.idea

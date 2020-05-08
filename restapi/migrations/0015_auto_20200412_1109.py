@@ -9,19 +9,25 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('restapi', '0014_auto_20200411_1214'),
+        ("restapi", "0014_auto_20200411_1214"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='newsitem',
-            name='publication_state',
-            field=models.CharField(choices=[('P', '✓'), ('D', '☓'), ('', '⚬')], default='', max_length=1),
+            model_name="newsitem",
+            name="publication_state",
+            field=models.CharField(
+                choices=[("P", "✓"), ("D", "☓"), ("", "⚬")], default="", max_length=1
+            ),
         ),
         migrations.AlterField(
-            model_name='rating',
-            name='user',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.DO_NOTHING, to=settings.AUTH_USER_MODEL),
+            model_name="rating",
+            name="user",
+            field=models.ForeignKey(
+                default=1,
+                on_delete=django.db.models.deletion.DO_NOTHING,
+                to=settings.AUTH_USER_MODEL,
+            ),
             preserve_default=False,
         ),
     ]

@@ -35,15 +35,17 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 
 
 class NewsItem(models.Model):
-    '''
+    """
     Represents a submitted news item and the different stages it goes through,
     from a mere url with a title and submitter to a summarised and analised
     entity that has been reviewed and rated by users
-    '''
+    """
 
     # mandatory fields
     target_url = models.CharField(max_length=250, unique=True)
-    date = models.DateTimeField(default=django.utils.timezone.now)  # date can be modified but defaults to now
+    date = models.DateTimeField(
+        default=django.utils.timezone.now
+    )  # date can be modified but defaults to now
     title = models.CharField(max_length=250)
     source = models.CharField(max_length=250)
     submitter = models.CharField(max_length=25)
@@ -63,42 +65,48 @@ class NewsItem(models.Model):
     summary = models.CharField(max_length=4096, default=None, blank=True, null=True)
     sentiment = models.CharField(max_length=20, default=None, blank=True, null=True)
 
-    PUBLISHED = 'P'
-    APPROVED = 'A'
-    DISCARDED = 'D'
-    PENDING = ''
+    PUBLISHED = "P"
+    APPROVED = "A"
+    DISCARDED = "D"
+    PENDING = ""
     PUBLICATION_STATES = [
-        (PUBLISHED, 'Published'),
-        (APPROVED, 'Approved'),
-        (DISCARDED, 'Discarded'),
-        (PENDING, '-')
+        (PUBLISHED, "Published"),
+        (APPROVED, "Approved"),
+        (DISCARDED, "Discarded"),
+        (PENDING, "-"),
     ]
     publication_state = models.CharField(
         max_length=1,
         choices=PUBLICATION_STATES,
         default=PENDING,
         blank=True,
-        verbose_name='PubStatus'
+        verbose_name="PubStatus",
     )
 
 
 class Rating(models.Model):
-    '''
+    """
     Ratings given to an item from a user
-    '''
+    """
+
     # has a many to one link to a NewsItem
     # this appears as a 'ratings' field in NewsItem instances that is called 'ratings'
-    newsItem = models.ForeignKey(NewsItem, blank=True, null=True,
-                                 related_name='ratings', on_delete=models.CASCADE)
+    newsItem = models.ForeignKey(
+        NewsItem,
+        blank=True,
+        null=True,
+        related_name="ratings",
+        on_delete=models.CASCADE,
+    )
     user = models.ForeignKey(User, null=False, on_delete=models.DO_NOTHING)
     RATING_VALUES = [
-        (-1, 'Bad'),
-        (0, 'Neutral'),
-        (1, 'Good'),
-        (2, 'Awesome'),
+        (-1, "Bad"),
+        (0, "Neutral"),
+        (1, "Good"),
+        (2, "Awesome"),
     ]
     rating = models.IntegerField(default=0, choices=RATING_VALUES)
-    date = models.DateTimeField(auto_now=True) # date changes on every save
+    date = models.DateTimeField(auto_now=True)  # date changes on every save
 
     def __str__(self):
-        return f'Rating({self.user},{self.rating})'
+        return f"Rating({self.user},{self.rating})"

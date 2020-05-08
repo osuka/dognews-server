@@ -8,12 +8,9 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('restapi', '0002_auto_20191112_1100'),
+        ("restapi", "0002_auto_20191112_1100"),
     ]
 
     operations = [
-        migrations.RenameModel(
-            old_name='NewsItemRating',
-            new_name='Rating',
-        ),
+        migrations.RenameModel(old_name="NewsItemRating", new_name="Rating",),
     ]

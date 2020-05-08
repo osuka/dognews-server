@@ -6,23 +6,35 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('restapi', '0015_auto_20200412_1109'),
+        ("restapi", "0015_auto_20200412_1109"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='newsitem',
-            name='publication_state',
-            field=models.CharField(blank=True, choices=[('P', 'Published'), ('P', 'Approved'), ('D', 'Discarded'), ('', '-')], default='', max_length=1, verbose_name='PubStatus'),
+            model_name="newsitem",
+            name="publication_state",
+            field=models.CharField(
+                blank=True,
+                choices=[
+                    ("P", "Published"),
+                    ("P", "Approved"),
+                    ("D", "Discarded"),
+                    ("", "-"),
+                ],
+                default="",
+                max_length=1,
+                verbose_name="PubStatus",
+            ),
         ),
         migrations.AlterField(
-            model_name='rating',
-            name='date',
-            field=models.DateTimeField(auto_now=True),
+            model_name="rating", name="date", field=models.DateTimeField(auto_now=True),
         ),
         migrations.AlterField(
-            model_name='rating',
-            name='rating',
-            field=models.IntegerField(choices=[(-1, 'Bad'), (0, 'Neutral'), (1, 'Good'), (2, 'Awesome')], default=0),
+            model_name="rating",
+            name="rating",
+            field=models.IntegerField(
+                choices=[(-1, "Bad"), (0, "Neutral"), (1, "Good"), (2, "Awesome")],
+                default=0,
+            ),
         ),
     ]

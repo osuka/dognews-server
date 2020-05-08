@@ -25,31 +25,36 @@ from drf_yasg import openapi
 from restapi import views
 
 
-router = ExtendedDefaultRouter()
-router.register(r'users', views.UserViewSet)
-router.register(r'groups', views.GroupViewSet)
-router.register(r'newsItem', views.NewsItemViewSet).register(
-    r'ratings', views.NewsItemRatingViewSet, basename='newsItem-ratings',
-    parents_query_lookups=['newsItem_id'],
+# this is a router that can help with nested view lookups byt concatenating
+# calls to 'register' for sub paths.
+# it adds parameters with a prefix of 'parent_lookup_' to self.kwargs
+
+# Here we define newsItem and /newsItem/ID/ratings
+router = ExtendedDefaultRouter(trailing_slash=False)
+router.register(r"newsItem", views.NewsItemViewSet).register(
+    r"ratings",
+    views.NewsItem_RatingViewSet,
+    basename="newsItem-ratings",
+    parents_query_lookups=[
+        "newsItem_id"
+    ],  # this auto creates 'parent_lookup_newsItem_id' as kwarg
 )
-# the parent query lookups are part of the django extensions nested router
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
 ]
 
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns += [
-    path('', include(router.urls)),
-    path('api-auth/', include('rest_framework.urls',
-                              namespace='rest_framework')),
+    path("", include(router.urls)),
+    path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
 ]
 
 schema_view = get_schema_view(
     openapi.Info(
         title="Dognews Server API",
-        default_version='v1',
+        default_version="v1",
         description="API For the dog news server application",
         terms_of_service="",
         contact=openapi.Contact(email="contact-openapi@gatillos.com"),
@@ -60,9 +65,19 @@ schema_view = get_schema_view(
 )
 
 urlpatterns += [
-    url(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    url(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    url(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    url(
+        r"^swagger(?P<format>\.json|\.yaml)$",
+        schema_view.without_ui(cache_timeout=0),
+        name="schema-json",
+    ),
+    url(
+        r"^swagger/$",
+        schema_view.with_ui("swagger", cache_timeout=0),
+        name="schema-swagger-ui",
+    ),
+    url(
+        r"^redoc/$", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"
+    ),
 ]
 
 # For Token based authentication - this endpoint allows a user to request a token by sending user/password
@@ -71,9 +86,7 @@ urlpatterns += [
 # note: we can also do
 #   ./manage.py drf_create_token <username>       (creates or retrieves)
 #   ./manage.py drf_create_token -r <username>      (regenerates)
-urlpatterns += [
-    url(r'^auth/login', authviews.obtain_auth_token)
-]
+urlpatterns += [url(r"^auth/login", authviews.obtain_auth_token)]
 
 admin.site.site_header = "Dog News"
 admin.site.site_title = "Dog News Admin Site"

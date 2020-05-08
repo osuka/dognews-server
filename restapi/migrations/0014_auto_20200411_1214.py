@@ -9,13 +9,17 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('restapi', '0013_auto_20200411_1136'),
+        ("restapi", "0013_auto_20200411_1136"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='rating',
-            name='user',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.DO_NOTHING, to=settings.AUTH_USER_MODEL),
+            model_name="rating",
+            name="user",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.DO_NOTHING,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

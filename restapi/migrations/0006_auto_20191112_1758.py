@@ -6,17 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('restapi', '0005_auto_20191112_1637'),
+        ("restapi", "0005_auto_20191112_1637"),
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='rating',
-            name='newsItem',
-        ),
+        migrations.RemoveField(model_name="rating", name="newsItem",),
         migrations.AlterField(
-            model_name='newsitem',
-            name='ratings',
-            field=models.ManyToManyField(default=None, related_name='ratings', to='restapi.Rating'),
+            model_name="newsitem",
+            name="ratings",
+            field=models.ManyToManyField(
+                default=None, related_name="ratings", to="restapi.Rating"
+            ),
         ),
     ]

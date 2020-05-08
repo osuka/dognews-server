@@ -1,24 +1,24 @@
 # Development notes
 
-<!-- TOC depthFrom:2 orderedList:true -->
-
-<!-- /TOC -->
+<!-- TOC depthFrom:2 orderedList:true -->autoauto1. [Initial project creation](#initial-project-creation)auto2. [Adding REST Django framework](#adding-rest-django-framework)auto  1. [Create serializers for the auth objects](#create-serializers-for-the-auth-objects)auto  2. [Create some views for the auth objects](#create-some-views-for-the-auth-objects)auto  3. [Map views to urls](#map-views-to-urls)auto  4. [Enable pagination on responses](#enable-pagination-on-responses)auto3. [Browseable API](#browseable-api)auto4. [Creating new models](#creating-new-models)auto5. [Creating admin pages for our models](#creating-admin-pages-for-our-models)auto6. [Auto Generating documentation](#auto-generating-documentation)auto7. [Creating per-environment configuration](#creating-per-environment-configuration)auto8. [Helpful tools](#helpful-tools)autoauto<!-- /TOC -->
 
 > Some notes I took while creating this project - nothing fancy but may help troubleshooting
 > Most of this comes from following the [official tutorial](https://docs.djangoproject.com/en/2.2/intro/tutorial01/)
 
+<a id="markdown-initial-project-creation" name="initial-project-creation"></a>
 ## Initial project creation
 
 > Check [virtualenv](https://virtualenv.pypa.io/en/stable/) for more
 > Check [django](https://docs.djangoproject.com/en/3.0/)
 
 ```sh
-virtualenv -p python3.7 venv
+virtualenv -p python3.8 venv
 source venv/bin/activate
 echo 'Django>=3' >>requirements.txt
 pip install -r requirements.txt
 django-admin startproject dognews
 ```
+
 Now we have the following structure:
 
 ```text
@@ -77,6 +77,7 @@ Finally we need to create an initial _superuser_
 python manage.py createsuperuser --email xxxx@xxxxxxx.xxx --username XXXXX
 ```
 
+<a id="markdown-adding-rest-django-framework" name="adding-rest-django-framework"></a>
 ## Adding REST Django framework
 
 > Check [Django Rest Framework](https://www.django-rest-framework.org/)
@@ -95,6 +96,7 @@ A few quick concepts in Django Rest Framework:
 * Serializer: representation of the model, similar to a POJO in java, or a json object
 * View: the exposed actions (determins what urls are available and what is shown on each, for instance 'a list of all user')
 
+<a id="markdown-create-serializers-for-the-auth-objects" name="create-serializers-for-the-auth-objects"></a>
 ### Create serializers for the auth objects
 
 The auth module (check [django.contrib.auth on Django](https://docs.djangoproject.com/en/3.0/ref/contrib/auth/)) is standard in django and provides simple user/group/permission authentication and authorization.
@@ -116,6 +118,7 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
 
 Add this to `restapi/serializers.py`
 
+<a id="markdown-create-some-views-for-the-auth-objects" name="create-some-views-for-the-auth-objects"></a>
 ### Create some views for the auth objects
 
 We will not be actually publishing user and group lists via REST these for this application, but they are an easy way to get to grips with the concepts:
@@ -140,6 +143,7 @@ We add this to the existing `restapi/views.py`
 > * OPTIONS: to get a list of available actions for a URL and content types allowed
 > * GET, PUT, DELETE according to the model and relations
 
+<a id="markdown-map-views-to-urls" name="map-views-to-urls"></a>
 ### Map views to urls
 
 Finally we just need to publish the views we have created using the rest framework version of a 'router':
@@ -164,6 +168,7 @@ With this we are publishing under `/users`, `/groups` and ca do things like `GET
 About the `api-auth/` URLs there, they are suggested by the DRF tutorial:
 > Finally, we're including default login and logout views for use with the browsable API. That's optional, but useful if your API requires authentication and you want to use the browsable API.
 
+<a id="markdown-enable-pagination-on-responses" name="enable-pagination-on-responses"></a>
 ### Enable pagination on responses
 
 We can easily configure the rest framework to return paginated results, in settings.py:
@@ -175,6 +180,7 @@ REST_FRAMEWORK = {
 }
 ```
 
+<a id="markdown-browseable-api" name="browseable-api"></a>
 ## Browseable API
 
 Django Rest Framework exposes a UI that can be used to browse the API with a nice HTML page that lets you click around, POST, GET, PUT, DELETE.
@@ -198,6 +204,7 @@ You can verify / use an alternative editor through the Django Admin console, whi
 
 > NOTE: password is not in the forms displayed by REST for the users, nor is it in the Admin console UI directly. Password change is done through `http://localhost:8181/admin/password_change` in the admin console, that has the typical 'previous password' requirement.
 
+<a id="markdown-creating-new-models" name="creating-new-models"></a>
 ## Creating new models
 
 This project is going to be very simple so we will likely only have one 'app' (it's a modular unit for django, a subset of functionality).
@@ -254,6 +261,7 @@ Migrations for 'restapi':
     - Create model NewsItemRating
 ```
 
+<a id="markdown-creating-admin-pages-for-our-models" name="creating-admin-pages-for-our-models"></a>
 ## Creating admin pages for our models
 
 Add to [./restapi/admin.py](./restapi/admin.py) what we want shown on the /admin pages:
@@ -273,6 +281,7 @@ class NewsItemAdmin(admin.ModelAdmin):
 
 > Note: without extra = 0 it creates 3 empty objects in the form (this is in InlineModelAdmin, where it declares extra = 3 god knows why)
 
+<a id="markdown-auto-generating-documentation" name="auto-generating-documentation"></a>
 ## Auto Generating documentation
 
 There are a few ways to go about this. One thing we can do is manually generate an OpenAPI Schema representation. This is a yaml document expressing all the exposed methods that we have
@@ -298,6 +307,7 @@ Exposed URLs are:
 * /swagger/
 * /redoc/
 
+<a id="markdown-creating-per-environment-configuration" name="creating-per-environment-configuration"></a>
 ## Creating per-environment configuration
 
 I have currently three needs: local, dreamhost and test
@@ -320,6 +330,7 @@ export DJANGO_SETTINGS_MODULE=dognews.settings.local
 python manage.py runserver
 ```
 
+<a id="markdown-helpful-tools" name="helpful-tools"></a>
 ## Helpful tools
 
 ```sh
