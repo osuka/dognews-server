@@ -1,15 +1,11 @@
 # Development notes
 
-<!-- TOC depthFrom:2 orderedList:true -->autoauto1. [Initial project creation](#initial-project-creation)auto2. [Adding REST Django framework](#adding-rest-django-framework)auto  1. [Create serializers for the auth objects](#create-serializers-for-the-auth-objects)auto  2. [Create some views for the auth objects](#create-some-views-for-the-auth-objects)auto  3. [Map views to urls](#map-views-to-urls)auto  4. [Enable pagination on responses](#enable-pagination-on-responses)auto3. [Browseable API](#browseable-api)auto4. [Creating new models](#creating-new-models)auto5. [Creating admin pages for our models](#creating-admin-pages-for-our-models)auto6. [Auto Generating documentation](#auto-generating-documentation)auto7. [Creating per-environment configuration](#creating-per-environment-configuration)auto8. [Helpful tools](#helpful-tools)autoauto<!-- /TOC -->
-
 > Some notes I took while creating this project - nothing fancy but may help troubleshooting
 > Most of this comes from following the [official tutorial](https://docs.djangoproject.com/en/2.2/intro/tutorial01/)
 
-<a id="markdown-initial-project-creation" name="initial-project-creation"></a>
 ## Initial project creation
 
-> Check [virtualenv](https://virtualenv.pypa.io/en/stable/) for more
-> Check [django](https://docs.djangoproject.com/en/3.0/)
+> Check [virtualenv](https://virtualenv.pypa.io/en/stable/) for more. Check [django](https://docs.djangoproject.com/en/3.0/) for more.
 
 ```sh
 virtualenv -p python3.8 venv
@@ -77,7 +73,6 @@ Finally we need to create an initial _superuser_
 python manage.py createsuperuser --email xxxx@xxxxxxx.xxx --username XXXXX
 ```
 
-<a id="markdown-adding-rest-django-framework" name="adding-rest-django-framework"></a>
 ## Adding REST Django framework
 
 > Check [Django Rest Framework](https://www.django-rest-framework.org/)
@@ -96,7 +91,6 @@ A few quick concepts in Django Rest Framework:
 * Serializer: representation of the model, similar to a POJO in java, or a json object
 * View: the exposed actions (determins what urls are available and what is shown on each, for instance 'a list of all user')
 
-<a id="markdown-create-serializers-for-the-auth-objects" name="create-serializers-for-the-auth-objects"></a>
 ### Create serializers for the auth objects
 
 The auth module (check [django.contrib.auth on Django](https://docs.djangoproject.com/en/3.0/ref/contrib/auth/)) is standard in django and provides simple user/group/permission authentication and authorization.
@@ -118,7 +112,6 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
 
 Add this to `restapi/serializers.py`
 
-<a id="markdown-create-some-views-for-the-auth-objects" name="create-some-views-for-the-auth-objects"></a>
 ### Create some views for the auth objects
 
 We will not be actually publishing user and group lists via REST these for this application, but they are an easy way to get to grips with the concepts:
@@ -143,7 +136,6 @@ We add this to the existing `restapi/views.py`
 > * OPTIONS: to get a list of available actions for a URL and content types allowed
 > * GET, PUT, DELETE according to the model and relations
 
-<a id="markdown-map-views-to-urls" name="map-views-to-urls"></a>
 ### Map views to urls
 
 Finally we just need to publish the views we have created using the rest framework version of a 'router':
@@ -168,7 +160,6 @@ With this we are publishing under `/users`, `/groups` and ca do things like `GET
 About the `api-auth/` URLs there, they are suggested by the DRF tutorial:
 > Finally, we're including default login and logout views for use with the browsable API. That's optional, but useful if your API requires authentication and you want to use the browsable API.
 
-<a id="markdown-enable-pagination-on-responses" name="enable-pagination-on-responses"></a>
 ### Enable pagination on responses
 
 We can easily configure the rest framework to return paginated results, in settings.py:
@@ -180,7 +171,6 @@ REST_FRAMEWORK = {
 }
 ```
 
-<a id="markdown-browseable-api" name="browseable-api"></a>
 ## Browseable API
 
 Django Rest Framework exposes a UI that can be used to browse the API with a nice HTML page that lets you click around, POST, GET, PUT, DELETE.
@@ -204,7 +194,6 @@ You can verify / use an alternative editor through the Django Admin console, whi
 
 > NOTE: password is not in the forms displayed by REST for the users, nor is it in the Admin console UI directly. Password change is done through `http://localhost:8181/admin/password_change` in the admin console, that has the typical 'previous password' requirement.
 
-<a id="markdown-creating-new-models" name="creating-new-models"></a>
 ## Creating new models
 
 This project is going to be very simple so we will likely only have one 'app' (it's a modular unit for django, a subset of functionality).
@@ -261,7 +250,6 @@ Migrations for 'restapi':
     - Create model NewsItemRating
 ```
 
-<a id="markdown-creating-admin-pages-for-our-models" name="creating-admin-pages-for-our-models"></a>
 ## Creating admin pages for our models
 
 Add to [./restapi/admin.py](./restapi/admin.py) what we want shown on the /admin pages:
@@ -281,7 +269,195 @@ class NewsItemAdmin(admin.ModelAdmin):
 
 > Note: without extra = 0 it creates 3 empty objects in the form (this is in InlineModelAdmin, where it declares extra = 3 god knows why)
 
-<a id="markdown-auto-generating-documentation" name="auto-generating-documentation"></a>
+## Populate initial data
+
+Create an empty migration:
+
+```
+DJANGO_SETTINGS_MODULE=xxxx python manage.py makemigrations restapi --empty
+```
+
+This will generate a file in `restapi/migrations/00XX_auto_YYYYDDMM_HHMM.py`.
+
+It will contain a reference to the predecesor (last migration) automatically added.
+
+Django contains some magic that allows you to use the models as they were in a point in time
+
+```python
+def create_admin_group(apps, schema_editor):
+    # very important to not import directly the model
+    Group = apps.get_model('auth', 'Group')
+    Permission = apps.get_model('auth', 'Permission')
+    admin_group, _ = Group.objects.get_or_create(name=f"admin")
+    admin_group.permissions.add(
+        *Permission.objects.filter(codename="view_newsitem"),
+        *Permission.objects.filter(codename="add_newsitem"),
+        *Permission.objects.filter(codename="change_newsitem"),
+        *Permission.objects.filter(codename="delete_newsitem"),
+        *Permission.objects.filter(codename="view_rating"),
+        *Permission.objects.filter(codename="add_rating"),
+        *Permission.objects.filter(codename="change_rating"),
+        *Permission.objects.filter(codename="delete_rating"),
+    )
+    admin_group.save()
+```
+
+Then we just have to add the operation to the list of things to do on this migration:
+
+```
+operations = [
+        migrations.RunPython(create_admin_group),
+    ]
+```
+
+You can execute them by running `./manage.py migrate`
+
+## Per object permissions
+
+### Trying djang-guardian
+
+The default model permissions are good for quick admin pages, as they determine which staff users have access to what in a broad sense.
+* Example: users in the group 'admins' can see and edit all models
+* Example: users in the group 'new_moderators' can see and edit all articles in the News model, but nothing else etc
+
+For external or system users we may want some more specific permissions. We can do this by overriding the has_permission method but there are also frameworks that fulfill this.
+* Example: a user can change their own rating, but not any other's
+
+With django-guardian: add it to `requirements.txt` and add 'guardian' to `INSTALLED_APPS` `in settings.py`.
+
+Add `'guardian.backends.ObjectPermissionBackend',` to the `AUTHENTICATION_BACKENDS` (at the end), or add the whole variable if missing:
+
+```python
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend', # default
+    'guardian.backends.ObjectPermissionBackend',
+)
+```
+
+This creates the tables 'guardian_groupobjectpermission' and 'guardian_userobjectpermission'.
+
+Run `manage.py migrate`.
+
+From then on you can add permissions to specific objects, for instance now we can make sure that existing users can
+only modify their own ratings by allowing the 'change' permission only to the own user:
+
+```python
+from guardian.models import UserObjectPermission
+for newsItem in NewsItem.objects.all():
+    for rating in newsItem.ratings.all():
+        UserObjectPermission.objects.assign_perm('change_rating', rating.user, obj=rating) # would not be allowed delete
+```
+
+We will need code to add this logic on creation. **For Admin pages** we can use the PermissionRequireMixin:
+
+```python
+class NewsItemView(PermissionRequiredMixin, ModelView)
+    def form_valid(self, *args, **kwargs):
+        resp = super().form_valid(*args, **kwargs)
+        assign_perm('view_article', self.request.user, self.object)
+        assign_perm('change_article', self.request.user, self.object)
+        assign_perm('delete_article', self.request.user, self.object)
+        return resp
+```
+
+This doesn't seem to be the best match for this particular app mostly because of the database approach, but it does allow a model I may like so I'll leave this as a reference here.
+
+### Trying django-rules
+
+This is [another per-model permission framework](https://github.com/dfunckt/django-rules) that offers integration with django-rest-framework.
+
+Installation: add 'django-rules' to requirements.txt, 'rules' to INSTALLED_APPS, set the auth backends:
+
+```python
+AUTHENTICATION_BACKENDS = (
+    'rules.permissions.ObjectPermissionBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
+```
+
+This framework is based on the concept of 'predicates', instead of database rules these are functions that determine if a permission is given or not.
+Any function can be a predicate.
+
+There's some useful predefined predicates:
+
+* is_authenticated(user)
+* is_superuser(user)
+* is_staff(user), staff users
+* is_active(user)
+* is_group_member(*groups)  (must pertain to all of those groups)
+
+```python
+@rules.predicate
+def belongs_to_user(user, rating):
+    return rating.user == user
+
+# option 1: there is a 'bag' of rules we can use if we add them in models or views:
+rules.add_rule('belongs_to_user', belongs_to_user)
+
+# option 2: we can instead define a 'permission' which is a rule associated to a model
+rules.add_perm('rating.change_rating', belongs_to_user | is_staff)
+
+# option 3: (needs !) we can also declare them as part of the models themselves
+from django.db import models
+from rules.contrib.models import RulesModelBase, RulesModelMixin
+class NewsItem(RulesModelMixin, models.Model, metaclass=RulesModelBAse):
+    class Meta:
+        rules_permissions = {
+            'add': rules.is_staff
+            'change': belongs_to_user | rules.is_staff,
+        }
+
+# option 4: (needs 2) we can add them to views
+from rules.contrib.views import PermissionRequiredMixin
+class NewsItemUpdate(PermissionRequiredMixin, UpdateView):
+    model = NewsItem
+    permission_required = 'rating.change_rating'
+
+```
+
+> Predicates can be combined with &, |, ^ (P1 ^ P2 = true if only one of them is True), ~
+
+### Going back to basics
+
+Overall it all seems a bit too magic and not part of django or django-rest-framework so instead of that I'm going to basic and do it implementing the has_permission methods
+as in [the official django-rest-framework documentation](https://www.django-rest-framework.org/api-guide/permissions/)
+
+For the example of newsItem:
+
+```python
+
+# an example of a non-per object permission
+class IsAuthenticated(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated
+
+# an example of a per-object permission
+class IsOwnerOrStaff(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if view.action == 'update' or view.action == 'partial_update' or view.action == 'delete':
+            return obj.user == request.user or request.user.is_staff
+        return True
+
+class RatingViewSet(viewsets.ModelViewSet):
+    serializer_class = RatingSerializer
+    queryset = Rating.objects.all()
+    permission_classes = (IsOwnerOrStaff,)
+```
+
+Note that above, to not split the viewset into the individual views (because it's nicer to have less code), I've added a check in the permission itself, so it does one thing or another depending on the action.
+
+For extended cases it's probably better to just not use ViewSets and instead use the generic views directly, like:
+
+```python
+class UserView(generics.ListCreateAPIView):
+    permission_classes = (...,)
+    ...
+
+class UserView(generics.UpdateAPIView):
+    permission_classes = (...,)
+    ...
+```
+
 ## Auto Generating documentation
 
 There are a few ways to go about this. One thing we can do is manually generate an OpenAPI Schema representation. This is a yaml document expressing all the exposed methods that we have
@@ -307,7 +483,6 @@ Exposed URLs are:
 * /swagger/
 * /redoc/
 
-<a id="markdown-creating-per-environment-configuration" name="creating-per-environment-configuration"></a>
 ## Creating per-environment configuration
 
 I have currently three needs: local, dreamhost and test
@@ -330,7 +505,6 @@ export DJANGO_SETTINGS_MODULE=dognews.settings.local
 python manage.py runserver
 ```
 
-<a id="markdown-helpful-tools" name="helpful-tools"></a>
 ## Helpful tools
 
 ```sh

@@ -13,8 +13,8 @@ http# NOTE:
 ###
 
 @server=127.0.0.1:8000
-@user=adminz
-@passwd=XXXXXXXXXXXXXXXXX
+@user=non_staff_user
+@passwd=xxxxxxxx
 
 ###
 
@@ -34,13 +34,13 @@ Authorization: Basic {{user}} {{passwd}}
 
 ###
 
-GET http://{{server}}/newsItem/
+GET http://{{server}}/newsItem
 content-type: application/json
 Authorization: Basic {{user}} {{passwd}}
 
 ###
 
-POST http://{{server}}/newsItem/
+POST http://{{server}}/newsItem
 content-type: application/json
 Authorization: Basic {{user}} {{passwd}}
 
@@ -48,13 +48,12 @@ Authorization: Basic {{user}} {{passwd}}
   "target_url": "https://google.com",
   "title": "this is a title",
   "source": "examples.http",
-  "submitter": "vscode"
 }
 
 ###
 
 # same but using token authentication
-POST http://{{server}}/newsItem/
+POST http://{{server}}/newsItem
 content-type: application/json
 Authorization: Token {{authToken}}
 
@@ -62,36 +61,46 @@ Authorization: Token {{authToken}}
   "target_url": "https://google.com/?q=test1",
   "title": "this is a title",
   "source": "examples.http",
-  "submitter": "vscode"
 }
 
 ###
 
-GET http://{{server}}/newsItem/2/ratings/
+GET http://{{server}}/newsItem/1/ratings
 content-type: application/json
 Authorization: Basic {{user}} {{passwd}}
 
 
 ###
 
-POST http://{{server}}/newsItem/2/ratings/
-content-type: application/json
-Authorization: Basic {{user}} {{passwd}}
-
-{
-  "rating": -2,
-  "user": 1
-}
-
-
-###
-
-PATCH http://{{server}}/newsItem/2/ratings/1/
+POST http://{{server}}/newsItem/1/ratings
 content-type: application/json
 Authorization: Basic {{user}} {{passwd}}
 
 {
   "rating": -1
+}
+
+
+###
+
+PATCH http://{{server}}/newsItem/1/ratings/1
+content-type: application/json
+Authorization: Basic {{user}} {{passwd}}
+
+{
+  "rating": 0
+}
+
+
+###
+
+# will replace previous rating
+POST http://{{server}}/newsItem/1/ratings
+content-type: application/json
+Authorization: Basic {{user}} {{passwd}}
+
+{
+  "rating": 1
 }
 
 

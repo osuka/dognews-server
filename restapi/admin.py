@@ -93,7 +93,7 @@ class NewsItemAdmin(admin.ModelAdmin):
         "publication_state",
         "sentiment_icon",
         "rating_count",
-        "submitter",
+        "user",
     )
 
     # class RatingCountFilter(admin.SimpleListFilter):
@@ -116,7 +116,7 @@ class NewsItemAdmin(admin.ModelAdmin):
     #             return queryset.exclude(benevolence_factor__gt=75)
     #         return queryset
 
-    list_filter = ("submitter", "source", "sentiment", "publication_state")
+    list_filter = ("user", "source", "sentiment", "publication_state")
     list_display_links = ("date", "title")
 
     # detail view (uses NewsItemForm above)
@@ -149,7 +149,7 @@ class NewsItemAdmin(admin.ModelAdmin):
                     "clickable_full_target_url",
                     "title",
                     "source",
-                    "submitter",
+                    "user",
                     "date",
                     "publication_state",
                     "body",

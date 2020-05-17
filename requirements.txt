@@ -1,6 +1,9 @@
 Django>=3
 djangorestframework>=3
 
+# per object permissions framework
+rules
+
 # needed for ratings nested model
 drf-extensions
 

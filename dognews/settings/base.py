@@ -41,7 +41,13 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",  # enable token authentication
     "restapi",  # <-- so it loads our models
     "drf_yasg",  # <-- live documentation
+    "rules",  # <-- per object permissions
 ]
+
+AUTHENTICATION_BACKENDS = (
+    'rules.permissions.ObjectPermissionBackend',
+    'django.contrib.auth.backends.ModelBackend', # default
+)
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

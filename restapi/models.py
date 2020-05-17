@@ -48,7 +48,7 @@ class NewsItem(models.Model):
     )  # date can be modified but defaults to now
     title = models.CharField(max_length=250)
     source = models.CharField(max_length=250)
-    submitter = models.CharField(max_length=25)
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)
 
     fetch_date = models.DateTimeField(default=django.utils.timezone.now)
 
