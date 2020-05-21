@@ -434,7 +434,7 @@ class IsAuthenticated(permissions.BasePermission):
 # an example of a per-object permission
 class IsOwnerOrStaff(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        if view.action == 'update' or view.action == 'partial_update' or view.action == 'delete':
+        if view.action == 'update' or view.action == 'partial_update' or view.action == 'destroy':
             return obj.user == request.user or request.user.is_staff
         return True
 
