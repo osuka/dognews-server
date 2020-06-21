@@ -22,7 +22,14 @@ from rest_framework.authtoken import views as authviews
 from rest_framework_extensions.routers import ExtendedDefaultRouter
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
+)
 from restapi import views
+from restapi.models import User
+from django.contrib.auth.models import Group, Permission
 
 
 # this is a router that can help with nested view lookups byt concatenating
@@ -88,6 +95,35 @@ urlpatterns += [
 #   ./manage.py drf_create_token -r <username>      (regenerates)
 urlpatterns += [url(r"^auth/login", authviews.obtain_auth_token)]
 
+# For JWT Token authentication (remember this is a playground for me, there's not really a lot of need for JWT here!)
+urlpatterns += [
+    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
+]
+
 admin.site.site_header = "Dog News"
 admin.site.site_title = "Dog News Admin Site"
 admin.site.index_title = "Welcome to the Dog News Server Administration Site"
+
+# initialise default users: TODO find a better home for this, it breaks the initial
+# database creation as it prevents loading to actually populate the user table 1st time
+
+# default_bots = [
+#     ["fetcher", ["change_submission", "view_submission"]],
+#     [
+#         "analyzer",
+#         ["change_moderatedsubmission", "view_submission", "view_moderatedsubmission"],
+#     ],
+# ]
+# for bot in default_bots:
+#     name = f"bot-{bot[0]}"
+#     perms = bot[1]
+#     user, _ = User.objects.get_or_create(
+#         username=name, email=f"{name}@gatillos.com", is_staff=True
+#     )
+
+#     for codename in perms:
+#         user.user_permissions.add(Permission.objects.get(codename=codename))
+#     user.save()
+

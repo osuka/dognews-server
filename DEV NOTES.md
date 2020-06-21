@@ -1,7 +1,7 @@
 # Development notes
 
-> Some notes I took while creating this project - nothing fancy but may help troubleshooting
-> Most of this comes from following the [official tutorial](https://docs.djangoproject.com/en/2.2/intro/tutorial01/)
+> Some notes I take while creating this project - nothing fancy but may help troubleshooting
+> Most of this comes from following the [official tutorial](https://docs.djangoproject.com/en/2.2/intro/tutorial01/) and documentation of the libraries in use
 
 ## Initial project creation
 
@@ -457,6 +457,225 @@ class UserView(generics.UpdateAPIView):
     permission_classes = (...,)
     ...
 ```
+
+## Authentication with JWT tokens
+
+Django does not support JWT directly but it does support token authentication. The principles are similar:
+
+* A login endpoint that returns a pair of { access_token, refresh_token }
+  * access_token: short-lived (5 minutes typically)
+  * refresh_token: long-lived (for example 1 day)
+
+For authorization, the tokens can include role information (see Authorization section below)
+
+### Typical code for an client application that would use JWT
+
+This is just an example, this could be any language:
+
+```python
+class MySimpleClient:
+    credentials = { "access_token": None, "refresh_token": None }
+    userpass = { "username": None, "password": None }
+
+    def __init__(username, password):
+        userpass = { "username": username, "password": "password" }
+
+    def login():
+        """ requests a new token using user/pass - implicitly called by the client methods """
+        response = client.post("/token", userpass)
+        if responses.status == 401:
+            return Exception('403 Forbidden: invalid user or password')
+        credentials = response.data
+
+    def refresh():
+        """ refreshes a token using refresh_token, relogins if that fails - implicitly called by client methods """
+        if credentials["refresh_token"] is not None:
+            response = client.post("/token/refresh", { "token": credentials["refresh_token"] })
+            if response.status == 401:
+                login()   # needs relogin, likely expired
+        else:
+            login()    # first time login
+
+    def post(endpoint, data, headers):
+        if credentials["access_token"] is None:
+            login()
+        response = client.post(endpoint, data, headers = {'authorization': f'Bearer {credentials["access_token"]}', **headers})
+        if response.status == 401:
+            login()
+            response = client.post(endpoint, data, {'authorization': f'Bearer {credentials["access_token"]}', **headers})
+        return response
+
+    def get(endpoint, headers):
+        if credentials["access_token"] is None:
+            login()
+        response = client.get(endpoint, headers = {'authorization': f'Bearer {credentials["access_token"]}', **headers})
+        if response.status == 401:
+            login()
+            response = client.get(endpoint, {'authorization': f'Bearer {credentials["access_token"]}', **headers})
+        return response
+
+    def update(...):
+    def patch(...):
+    def delete(...):
+        ...
+```
+
+### Adding JWT to django and django-rest-framework
+
+Django doesn't support JWT directly, the recommended package is  djangorestframework-simplejwt.
+
+> Note that the library was looking for maintainers but seems to be now maintained by a group of devs under SimpleJWT. It can always be forked and tweaked as it's MIT-licensed. Another library called djangorestframework-jwt is now deprecated.
+
+Add to requirements.txt:
+
+```text
+djangorestframework-simplejwt
+```
+
+Define SIMPLE_JWT in settings.py, see the [detailed explanation of options](https://django-rest-framework-simplejwt.readthedocs.io/en/latest/) and the [github project page](https://github.com/SimpleJWT/django-rest-framework-simplejwt).
+
+```python
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
+```
+
+Enable this as a new 'authentication class':
+
+```python
+REST_FRAMEWORK = {
+    ...
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        ...
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+    ...
+}
+```
+
+In the main `urls.py` file, we now need to define endpoints for creating a token, refreshing it and (optional) verifying it:
+
+```python
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+
+urlpatterns += [
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify),
+]
+```
+
+## Authorization with JWT
+
+Make sure to have checked [Authentication with JWT tokens](#Authentication-with-JWT-tokens)
+
+JWT adds some information to the token that can be retrieved in the backend without having to go to the database.
+One use for this is to store in there the roles of a user and other useful information. This are called 'claims' in this context.
+
+Generate a new view in views.py:
+
+```python
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['name'] = user.name
+        token['groups'] = [group.name for group in user.groups.all()]
+        return token
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
+```
+
+And then register that view in urls.py instead of the default one:
+
+```python
+urlpatterns += [
+    path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),  # <=== CHANGED view
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify),
+]
+```
+
+## Django extensions package (django-extensions)
+
+This project includes a set of helper tools that are not needed for actually running the project but can save some time, I'll list here what I find useful.
+
+These extensions all create new commands for `manage.py`.
+
+Add to requirements.txt
+
+```text
+django-extensions
+```
+
+Add it to installed_apps:
+
+```python
+INSTALLED_APPS = (
+    ...
+    'django_extensions',
+    ...
+)
+```
+
+### List all possible endpoints
+
+As a project grows big it can get messy to identify all the URLs. One option is to check the autogenerated documentation (see below), but for debugging, diagnosis it may be convenient to print all the possible urls. There's a nice discussion and code that [adds a new command to manage.py](https://stackoverflow.com/a/39504813) but I'll use django-extensions instead.
+
+```bash
+./manage.py show_urls
+```
+
+> This is particularly helpful to discover endpoints that we should add tests for and for matching endpoints to classes
+
+### Better python shell
+
+See all [the details in the documentation](https://django-extensions.readthedocs.io/en/latest/shell_plus.html) but shell_plus is a python shell that has required already all the module objects, so you can directly start with `NewsItem.objects.all()` etc.
+
+You can also have it launch [ipython](https://ipython.org/) which is a nicer experience that the default shell. Check [ipython's usage here](https://ipython.readthedocs.io/en/stable/)
+
+```bash
+./manage.py shell_plus
+
+# or
+
+pip install ipython
+./manage.py shell_plus --ipython
+```
+
+Some notes on ipython:
+
+* `?` for help
+* `!ls -al` to run shell commands
+* `_` previous output
+* `__` previous previous, `___` previous previous previous
+* `help(object.method)` shows help string, as normal python
+* `NewsItem?`shows docstring, file name, type
+* `NewsItem??` shows the code
+* `*News*?` wildcards can be used for searching objects
+* `%load` load code
+* `%page x` pretty print x, paged
+* `%quickref` list more commands in a summary
+
+### Create a graph of the models
+
+```bash
+apt install -y graphviz
+pip install pydotplus
+./manage.py graph_models -a -o models.png
+```
+
+You can see the result here:
+
+![Models](./models.png)
+
+You can exclude models and columns (see [the documentation](https://django-extensions.readthedocs.io/en/latest/graph_models.html))
+
 
 ## Auto Generating documentation
 

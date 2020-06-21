@@ -21,7 +21,6 @@ http# NOTE:
 # @name login
 POST http://{{server}}/auth/login/
 content-type: application/json
-Authorization: Basic {{user}} {{passwd}}
 
 {
   "username": "{{user}}",

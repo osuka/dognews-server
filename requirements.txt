@@ -16,3 +16,10 @@ drf-yasg
 
 # parse urls
 tldextract
+
+# jwt authentication
+djangorestframework-simplejwt
+
+# set of helpers for manage.py
+# check https://github.com/django-extensions/django-extensions
+django-extensions

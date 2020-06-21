@@ -1,14 +1,35 @@
 from django.contrib import admin
+from django.contrib.auth.models import Permission
+from . import models
 
-from .models import NewsItem, Rating
 from django import forms
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 import tldextract
 
 
+class LastModifiedByMixin:
+    """ Add this to an object that has a 'last_modified_by' datetime field, and it will be
+    set to the currently logged user when saving """
+
+    def save_model(self, request, obj, form, change):
+        obj.last_modified_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+class SetOwnerMixin:
+    """ Add this to an object that has an 'owner' field that is a fk to User, and it will be set
+    to the currently logged user when creating it """
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            # Only set added_by during the first save.
+            obj.owner = request.user
+        super().save_model(request, obj, form, change)
+
+
 class RatingInline(admin.TabularInline):
-    model = Rating
+    model = models.Rating
     min_num = 0
     extra = 0  # determines number of empty elements for new objects
     readonly_fields = ["date"]
@@ -19,14 +40,14 @@ class RatingInline(admin.TabularInline):
 # custom forms to tweak how each field is displayed in the detail page
 class NewsItemForm(forms.ModelForm):
     class Meta:
-        model = NewsItem
+        model = models.NewsItem
         exclude = []
 
     body = forms.CharField(widget=forms.Textarea(attrs={"cols": 120, "rows": 3}))
     summary = forms.CharField(widget=forms.Textarea(attrs={"cols": 120, "rows": 10}))
 
 
-@admin.register(NewsItem)
+@admin.register(models.NewsItem)
 class NewsItemAdmin(admin.ModelAdmin):
     inlines = [RatingInline]
     exclude = ["ratings"]
@@ -37,12 +58,12 @@ class NewsItemAdmin(admin.ModelAdmin):
     # -----------------------------------------------------------------------------------
 
     def make_discarded(modeladmin, request, queryset):
-        queryset.update(publication_state=NewsItem.DISCARDED)
+        queryset.update(publication_state=models.NewsItem.DISCARDED)
 
     make_discarded.short_description = "Mark as discarded"
 
     def make_approved(modeladmin, request, queryset):
-        queryset.update(publication_state=NewsItem.APPROVED)
+        queryset.update(publication_state=models.NewsItem.APPROVED)
 
     make_approved.short_description = "Mark as approved"
 

@@ -423,3 +423,20 @@ class NewsItemTests(APITestCase):
         self.assertEqual(
             response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED, response.data
         )
+
+    def test_cant_do_anything_public(self):
+        """ A public user (unauthenticated) can't see anything """
+        self.as_user(self.rw_user)
+        response = self.client.post(
+            "/newsItem", self.sample_with_ratings_item_without_user, format="json"
+        )
+        itemurl = response.data["url"]
+        item = NewsItem.objects.get(
+            target_url=self.sample_with_ratings_item_without_user["target_url"]
+        )
+        ratingId = item.ratings.all()[0].id
+        self.client.logout()
+        forbidden = ["/newsItem", f"{itemurl}", f"{itemurl}/ratings", f"{itemurl}/ratings/${ratingId}"]
+        for url in forbidden:
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED, f"Should not be able to access ${url}")

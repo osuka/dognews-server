@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+from datetime import timedelta
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -31,7 +32,6 @@ ALLOWED_HOSTS = ["192.168.1.149", "dognewsserver.gatillos.com"]
 # Application definition
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -39,14 +39,17 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",  # <-- added, to expose rest api
     "rest_framework.authtoken",  # enable token authentication
-    "restapi",  # <-- so it loads our models
+    "news",
+    "restapi",
     "drf_yasg",  # <-- live documentation
     "rules",  # <-- per object permissions
+    "django_extensions",  # <-- extends manage.py
+    "django.contrib.admin",  # <-- order is important for template overrides
 ]
 
 AUTHENTICATION_BACKENDS = (
-    'rules.permissions.ObjectPermissionBackend',
-    'django.contrib.auth.backends.ModelBackend', # default
+    "rules.permissions.ObjectPermissionBackend",
+    "django.contrib.auth.backends.ModelBackend",  # default
 )
 
 MIDDLEWARE = [
@@ -64,7 +67,7 @@ ROOT_URLCONF = "dognews.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [os.path.join(BASE_DIR, "templates")],
+        # "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -124,6 +127,14 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = "public/static/"
 
+# JWT authentication with djangorestframework-simplejwt
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+}
+
+
 # Rest framework
 
 REST_FRAMEWORK = {
@@ -144,5 +155,6 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.BasicAuthentication",
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.TokenAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
 }

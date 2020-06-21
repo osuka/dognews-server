@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
+import tldextract
 
 # django permissions note:
 #
@@ -24,14 +25,6 @@ from rest_framework.authtoken.models import Token
 #               provided as empty string if no default value is provided
 # null=True --> field is not required in forms and can be stored as
 #               null (None when read)
-
-# We are using Token authentication - the Tokens are created on user
-# creation, by listening to the post+save event on the user model
-# https://www.django-rest-framework.org/api-guide/authentication/#tokenauthentication
-@receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def create_auth_token(sender, instance=None, created=False, **kwargs):
-    if created:
-        Token.objects.create(user=instance)
 
 
 class NewsItem(models.Model):
@@ -110,3 +103,4 @@ class Rating(models.Model):
 
     def __str__(self):
         return f"Rating({self.user},{self.rating})"
+
