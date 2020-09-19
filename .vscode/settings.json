@@ -1,11 +1,30 @@
 {
-  "python.pythonPath": "/usr/local/bin/python",
+  "python.pythonPath": ".venv/bin/python3",
+  "files.exclude": {
+    "**/__pycache__": true,
+    ".venv/**": true
+  },
+  "files.watcherExclude": {
+    "**/.venv/**": true
+  },
+  "[javascript]": { "editor.formatOnSave": true },
+  "[typescript]": { "editor.formatOnSave": true },
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.tabSize": 4
+  },
+  "python.formatting.provider": "black",
+  "python.linting.pylintArgs": [
+     "--load-plugins",
+     "pylint_django",
+     "--rcfile=${workspaceFolder}/.pylintrc"
+  ],
+  "editor.formatOnType": true,
   "python.testing.pytestArgs": [
-    "."
+    "${workspaceFolder}/"
   ],
   "python.testing.unittestEnabled": false,
   "python.testing.nosetestsEnabled": false,
-  "python.testing.pytestEnabled": true,
-  "python.formatting.provider": "black",
-  "restructuredtext.confPath": ""
+  "python.testing.pytestEnabled": true
 }

@@ -1,9 +1,0 @@
-{% if custom_actions.items %}
-<div class="submit-row custom-submit-row" style="text-align:center;background: inherit;">
-  {% block submit-row %}
-  {% for key, value in custom_actions.items %}
-  <input type="submit" value="{{ value }}" name="{{ key }}" />
-  {% endfor %}
-  {% endblock %}
-</div>
-{% endif %}

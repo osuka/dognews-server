@@ -32,6 +32,7 @@ ALLOWED_HOSTS = ["192.168.1.149", "dognewsserver.gatillos.com"]
 # Application definition
 
 INSTALLED_APPS = [
+    "dogauth",  # <-- custom user model
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -39,8 +40,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",  # <-- added, to expose rest api
     "rest_framework.authtoken",  # enable token authentication
+    "custom_admin_actions",  # additional row of actions for ModelAdmins
     "news",
-    "restapi",
     "drf_yasg",  # <-- live documentation
     "rules",  # <-- per object permissions
     "django_extensions",  # <-- extends manage.py
@@ -101,11 +102,18 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
 ]
 
+AUTH_USER_MODEL = "dogauth.User"
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
@@ -147,10 +155,7 @@ REST_FRAMEWORK = {
     # this is due to migration from using CoreAPI to OpenAPI for generation
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema",
     # make default permissions to require auth
-    #'DEFAULT_PERMISSION_CLASSES': 'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
-    "DEFAULT_PERMISSION_CLASSES": [
-        "dognews.permissions.DjangoModelPermissionsIncludingGet",
-    ],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.DjangoModelPermissions"],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.BasicAuthentication",
         "rest_framework.authentication.SessionAuthentication",

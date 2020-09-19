@@ -1,0 +1,8 @@
+.submit-row.custom-submit-row {
+  text-align: center;
+  background: inherit;
+}
+
+.submit-row.custom-submit-row input {
+  font-size: large;
+}

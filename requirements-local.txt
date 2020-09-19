@@ -1,0 +1,23 @@
+-r requirements-common.txt
+pylint
+pytest
+pytest-django
+black
+pylint-django
+
+# logging HTTP requests/responses 
+django-request-logging
+
+# compare object trees
+deepdiff
+
+# mock http responses
+responses
+
+# mypy types
+django-stubs
+djangorestframework-stubs
+drf-yasg-stubs
+celery-stubs
+boto3-stubs
+

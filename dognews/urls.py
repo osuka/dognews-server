@@ -27,9 +27,9 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView,
 )
-from restapi import views
-from restapi.models import User
-from django.contrib.auth.models import Group, Permission
+
+# from django.contrib.auth.models import Group, Permission
+from news.views import SubmissionViewSet, UserViewSet
 
 
 # this is a router that can help with nested view lookups byt concatenating
@@ -38,14 +38,15 @@ from django.contrib.auth.models import Group, Permission
 
 # Here we define newsItem and /newsItem/ID/ratings
 router = ExtendedDefaultRouter(trailing_slash=False)
-router.register(r"newsItem", views.NewsItemViewSet).register(
-    r"ratings",
-    views.NewsItem_RatingViewSet,
-    basename="newsItem-ratings",
-    parents_query_lookups=[
-        "newsItem_id"
-    ],  # this auto creates 'parent_lookup_newsItem_id' as kwarg
-)
+router.register(r"submissions", SubmissionViewSet)
+router.register(r"users", UserViewSet)
+# router.register(r'groups', GroupViewSet)
+
+urlpatterns = [
+    path("", include(router.urls)),
+    path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
+]
+
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -58,7 +59,7 @@ urlpatterns += [
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
 ]
 
-schema_view = get_schema_view(
+schema_view = get_schema_view(  # pylint: disable=invalid-name
     openapi.Info(
         title="Dognews Server API",
         default_version="v1",
@@ -68,7 +69,7 @@ schema_view = get_schema_view(
         license=openapi.License(name="https://creativecommons.org/licenses/by-nd/3.0/"),
     ),
     public=True,
-    permission_classes=(permissions.AllowAny,),
+    permission_classes=[permissions.AllowAny],
 )
 
 urlpatterns += [
@@ -87,8 +88,8 @@ urlpatterns += [
     ),
 ]
 
-# For Token based authentication - this endpoint allows a user to request a token by sending user/password
-# auth/login is chosen by us
+# For Token based authentication - this endpoint allows a user to request a token by
+# sending user/password auth/login is chosen by us
 #
 # note: we can also do
 #   ./manage.py drf_create_token <username>       (creates or retrieves)
@@ -126,4 +127,3 @@ admin.site.index_title = "Welcome to the Dog News Server Administration Site"
 #     for codename in perms:
 #         user.user_permissions.add(Permission.objects.get(codename=codename))
 #     user.save()
-

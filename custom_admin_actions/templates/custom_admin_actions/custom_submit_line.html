@@ -1,0 +1,10 @@
+{% if custom_admin_actions.items %}
+<label>Custom Actions</label>
+<div class="submit-row custom-submit-row">
+  {% block submit-row %}
+  {% for key, value in custom_admin_actions.items %}
+  <input type="submit" value="{{ value }}" name="{{ custom_admin_actions_prefix }}{{ key }}" />
+  {% endfor %}
+  {% endblock %}
+</div>
+{% endif %}

@@ -8,8 +8,8 @@
 > Check [virtualenv](https://virtualenv.pypa.io/en/stable/) for more. Check [django](https://docs.djangoproject.com/en/3.0/) for more.
 
 ```sh
-virtualenv -p python3.8 venv
-source venv/bin/activate
+virtualenv -p python3.8 .venv
+source .venv/bin/activate
 echo 'Django>=3' >>requirements.txt
 pip install -r requirements.txt
 django-admin startproject dognews
@@ -18,7 +18,7 @@ django-admin startproject dognews
 Now we have the following structure:
 
 ```text
-├── venv
+├── .venv
 ├── requirements.txt
 └── dognews
     ├── dognews
@@ -39,13 +39,13 @@ Now we have the following structure:
 │   └── wsgi.py
 ├── manage.py
 ├── requirements.txt
-└── venv
+└── .venv
 ```
 
 Run it
 
 ```sh
-source venv/bin/activate
+source .venv/bin/activate
 ./manage.py --help
 ./manage.py migrate         # init database
 ./manage.py runserver 8181  # test it
@@ -133,8 +133,8 @@ class GroupViewSet(viewsets.ModelViewSet):
 We add this to the existing `restapi/views.py`
 
 > Note! There is a 'trick' here in that the 'ViewSet' is actually creating a lot of Views for the common behaviour associated to a model. In this case we give it the starting point, a query to the User model and that is enough for it to figure out views to list / add / delete and patch (update) entries. For some corner cases we may need to add individual views, or override those. It's exposing:
-> * OPTIONS: to get a list of available actions for a URL and content types allowed
-> * GET, PUT, DELETE according to the model and relations
+> OPTIONS: to get a list of available actions for a URL and content types allowed
+> GET, PUT, DELETE: according to the model and relations
 
 ### Map views to urls
 
@@ -222,7 +222,7 @@ This is the structure now:
 │   ├── models.py
 │   ├── tests.py
 │   └── views.py
-└── venv
+└── .venv
 ```
 
 Created some basic stubs of the models that you ca see here [./restapi/models.py](./restapi/models.py)
@@ -273,7 +273,7 @@ class NewsItemAdmin(admin.ModelAdmin):
 
 Create an empty migration:
 
-```
+```python
 DJANGO_SETTINGS_MODULE=xxxx python manage.py makemigrations restapi --empty
 ```
 
@@ -304,7 +304,7 @@ def create_admin_group(apps, schema_editor):
 
 Then we just have to add the operation to the list of things to do on this migration:
 
-```
+```python
 operations = [
         migrations.RunPython(create_admin_group),
     ]
@@ -317,10 +317,12 @@ You can execute them by running `./manage.py migrate`
 ### Trying djang-guardian
 
 The default model permissions are good for quick admin pages, as they determine which staff users have access to what in a broad sense.
+
 * Example: users in the group 'admins' can see and edit all models
 * Example: users in the group 'new_moderators' can see and edit all articles in the News model, but nothing else etc
 
 For external or system users we may want some more specific permissions. We can do this by overriding the has_permission method but there are also frameworks that fulfill this.
+
 * Example: a user can change their own rating, but not any other's
 
 With django-guardian: add it to `requirements.txt` and add 'guardian' to `INSTALLED_APPS` `in settings.py`.
@@ -676,7 +678,6 @@ You can see the result here:
 
 You can exclude models and columns (see [the documentation](https://django-extensions.readthedocs.io/en/latest/graph_models.html))
 
-
 ## Auto Generating documentation
 
 There are a few ways to go about this. One thing we can do is manually generate an OpenAPI Schema representation. This is a yaml document expressing all the exposed methods that we have
@@ -708,9 +709,9 @@ I have currently three needs: local, dreamhost and test
 
 Created:
 
-* requirements.txt (common)
-* requirements.dreamhost.txt
-* requirements.test.txt
+* requirements-common.txt (common)
+* requirements-dreamhost.txt
+* requirements-local.txt
 * module dognews.settings
   * base.py (common)
   * dreamhost.py (imports base, extends)

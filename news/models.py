@@ -1,6 +1,9 @@
+"""
+Models to handle new submissions and their lifecycle to becoming Articles
+"""
+
 from django.db import models
-from django.contrib.auth.models import User
-import django.utils
+from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -26,11 +29,17 @@ import tldextract
 # null=True --> field is not required in forms and can be stored as
 #               null (None when read)
 
-# We are using Token authentication - the Tokens are created on user
-# creation, by listening to the post+save event on the user model
-# https://www.django-rest-framework.org/api-guide/authentication/#tokenauthentication
+
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def create_auth_token(sender, instance=None, created=False, **kwargs):
+def create_auth_token(
+    sender, instance=None, created=False, **kwargs  # pylint: disable=unused-argument
+):
+    """
+    Create an associated auth token for any created user.
+    We are using Token authentication - the Tokens are created on user
+    creation, by listening to the post+save event on the user model
+    https://www.django-rest-framework.org/api-guide/authentication/#tokenauthentication
+    """
     if created:
         Token.objects.create(user=instance)
 
@@ -43,8 +52,10 @@ class Submission(models.Model):
     """
 
     class Statuses(models.TextChoices):
+        """ Lifecycle status """
+
         NEW = "new", "Processing"
-        ACCEPTED = "accepted", "Ready for review"
+        ACCEPTED = "accepted", "Moved to moderation"
         REJECTED_COULD_NOT_FETCH = "rej_fetch", "Rejected: Could not fetch"
         REJECTED_BLACKLISTED_DOMAIN = "rej_list", "Rejected: Blacklisted domain"
         REJECTED_MODERATOR = "rej_mod", "Rejected: Moderator action"
@@ -72,19 +83,30 @@ class Submission(models.Model):
 
     @property
     def domain(self):
+        """ Extract the domain piece of the URL, for display and blacklisting """
         if self.target_url:
             try:
                 extracted = tldextract.extract(self.target_url)
                 domain = f"{extracted.domain}.{extracted.suffix}"
                 return domain
-            except:
+            except ValueError:
                 pass
 
     def move_to_moderation(self):
+        """ Create a ModeratedSubmission associated to this submission, and return it """
+        if self.status == self.Statuses.ACCEPTED:
+            return ModeratedSubmission.objects.get(
+                target_url=self.target_url
+            )  # already done
+        if self.status != self.Statuses.NEW:
+            return None  # was rejected
         self.status = self.Statuses.ACCEPTED
-        moderated_submission = ModeratedSubmission.objects.create(submission=self,)
+        moderated_submission = ModeratedSubmission.objects.create(
+            submission=self,
+        )
         moderated_submission.save()
         self.save()
+        return moderated_submission
 
     def __str__(self):
         return f"{self.id} ({self.domain[:20]}...)"
@@ -99,9 +121,11 @@ class ModeratedSubmission(models.Model):
     """
 
     class Statuses(models.TextChoices):
+        """ Lifecycle status """
+
         NEW = "new", "Processing"
         READY = "ready", "Ready for review"
-        ACCEPTED = "accepted", "Accepted"
+        ACCEPTED = "accepted", "Published"
         REJECTED_COULD_NOT_FETCH = "rej_spam", "Rejected: It's spam"
         REJECTED_BLACKLISTED_DOMAIN = "rej_dupe", "Rejected: Duplicate"
         REJECTED_DOWNVOTED = "rej_votes", "Rejected: Users downvoted"
@@ -120,7 +144,7 @@ class ModeratedSubmission(models.Model):
         max_length=10, choices=Statuses.choices, default=Statuses.NEW
     )
     last_modified_by = models.ForeignKey(
-        to=User,
+        to=get_user_model(),
         on_delete=models.SET_NULL,
         null=True,
         editable=False,
@@ -143,7 +167,9 @@ class ModeratedSubmission(models.Model):
         max_length=250, null=True, blank=True, default=None, editable=False
     )
 
-    def save(self, *args, **kwargs):
+    def save(
+        self, force_insert=False, force_update=False, using=None, update_fields=None
+    ):
         # auto populate from the chose submission
         if self.submission and (
             not self.description or not self.title or not self.target_url
@@ -157,7 +183,32 @@ class ModeratedSubmission(models.Model):
             self.target_url = (
                 self.submission.target_url if not self.target_url else self.target_url
             )
-        super().save(*args, **kwargs)
+        super().save(force_insert, force_update, using, update_fields)
+
+    def move_to_article(self):
+        """Create an Article associated with this instance, and return it.
+        If called twice, it will return the already created object"""
+        target_url = self.target_url if self.target_url else self.submission.target_url
+        if self.status == self.Statuses.ACCEPTED:
+            return Article.objects.get(target_url=target_url)  # already exists
+        if self.status != self.Statuses.READY:
+            return None  # was rejected
+        self.status = self.Statuses.ACCEPTED
+        description = (
+            self.description if self.description else self.submission.description
+        )
+        title = self.title if self.title else self.submission.title
+        article = Article.objects.create(
+            moderated_submission=self,
+            target_url=target_url,
+            title=title,
+            description=description,
+            thumbnail=self.thumbnail,
+            submitter=self.submission.owner,
+        )
+        article.save()
+        self.save()
+        return article
 
     # + ratings: is a one-to-many relation, see Rating
     def __str__(self):
@@ -168,6 +219,8 @@ class Vote(models.Model):
     """ Vote/rating provided by a user for a submitted item """
 
     class Values(models.IntegerChoices):
+        """ Vote values are added when processing, so need to be numeric """
+
         UP = 1, "👍"
         DOWN = -1, "👎"
         FLAG = -100, "💩"
@@ -180,7 +233,7 @@ class Vote(models.Model):
         related_name="votes",
     )
     owner = models.ForeignKey(
-        to=User,
+        to=get_user_model(),
         on_delete=models.SET_NULL,
         null=True,
         editable=False,
@@ -204,6 +257,15 @@ class Article(models.Model):
     version of articles after review and moderation.
     """
 
+    class Statuses(models.TextChoices):
+        """ Lifecycle status """
+
+        VISIBLE = "visible", "Visible"
+        HIDDEN = "hidden", "Hidden (moderation action)"
+
+    status = models.CharField(
+        max_length=10, choices=Statuses.choices, default=Statuses.VISIBLE, editable=True
+    )
     target_url = models.URLField(unique=True)
     title = models.CharField(max_length=120)
     description = models.CharField(max_length=250)
@@ -211,7 +273,7 @@ class Article(models.Model):
         max_length=250, null=True, blank=True, default=None, editable=False
     )
     submitter = models.ForeignKey(
-        to=User,
+        to=get_user_model(),
         on_delete=models.SET_NULL,
         null=True,
         editable=False,
@@ -225,4 +287,3 @@ class Article(models.Model):
 
     def __str__(self):
         return f"{self.id} ({self.target_url[:20]},{self.date_created})"
-

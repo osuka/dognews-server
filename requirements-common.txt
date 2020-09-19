@@ -1,5 +1,6 @@
-Django>=3
+Django>=3.1
 djangorestframework>=3
+gunicorn
 
 # per object permissions framework
 rules

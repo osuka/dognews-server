@@ -1,4 +1,6 @@
+from django.http import HttpResponseRedirect
 from django.contrib import admin
+from django.contrib.admin.models import LogEntry, ContentType, CHANGE
 from django.contrib.auth.models import Permission
 from . import models
 
@@ -6,7 +8,39 @@ from django import forms
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
+
+from custom_admin_actions.admin import CustomActionsModelAdmin
 import tldextract
+
+
+def link_to_moderated_submission(moderated_submission: models.ModeratedSubmission):
+    return reverse(
+        "admin:%s_%s_change"
+        % (
+            models.ModeratedSubmission._meta.app_label,
+            models.ModeratedSubmission._meta.model_name,
+        ),
+        args=(moderated_submission.pk,),
+        current_app=admin.site.name,
+    )
+
+
+def link_to_submission(submission: models.Submission):
+    return reverse(
+        "admin:%s_%s_change"
+        % (models.Submission._meta.app_label, models.Submission._meta.model_name,),
+        args=(submission.pk,),
+        current_app=admin.site.name,
+    )
+
+
+def link_to_article(article: models.Article):
+    return reverse(
+        "admin:%s_%s_change"
+        % (models.Article._meta.app_label, models.Article._meta.model_name,),
+        args=(article.pk,),
+        current_app=admin.site.name,
+    )
 
 
 class SavesLastModifiedByMixin:
@@ -23,7 +57,6 @@ class SavesOwnerMixin:
     to the currently logged user when creating it """
 
     def save_model(self, request, obj, form, change):
-        print("set owner mixing called")
         if not obj.pk:
             # Only set added_by during the first save.
             obj.owner = request.user
@@ -43,7 +76,7 @@ class PermissionAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.Submission)
-class SubmissionAdmin(SavesOwnerMixin, admin.ModelAdmin):
+class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
     fields = [
         "target_url",
         "title",
@@ -66,34 +99,35 @@ class SubmissionAdmin(SavesOwnerMixin, admin.ModelAdmin):
     search_fields = ["target_url", "title", "description", "owner__username"]
     readonly_fields = ["owner", "status", "date_created", "last_updated"]
 
-    change_form_template = "news/custom_change_form.html"
-
-    def render_change_form(
-        self,
-        request,
-        context,
-        add=False,
-        change=False,
-        form_url="",
-        obj: models.Submission = None,
+    def get_custom_admin_actions(
+        self, request, context, add=False, change=False, form_url="", obj=None,
     ):
-        custom_actions = {}
         if obj and obj.status == obj.Statuses.NEW:
-            custom_actions["start_moderation"] = "Move to Moderation"
-            custom_actions["reject"] = "Reject"
-        context.update({"custom_actions": custom_actions})
-        return super().render_change_form(
-            request, context, add=add, change=not add, obj=obj, form_url=form_url
-        )
-        # super.render_change_form(request, context, add, change, form_url, obj)
+            return {"start_moderation": "Move to Moderation", "reject": "Reject"}
+        return {}
 
-    def response_change(self, request, obj: models.Submission):
-        if "start_moderation" in request.POST:
-            obj.move_to_moderation()
-        elif "reject" in request.POST:
+    def custom_action_called(self, request, custom_action_code, obj=None):
+        if custom_action_code == "start_moderation":
+            moderated_submission = obj.move_to_moderation()
+            # redirect to hte ModeratedSubmission page for editing
+            redirect_url = link_to_moderated_submission(moderated_submission)
+            # log it into the django admin history
+            LogEntry.objects.log_action(
+                user_id=request.user.pk,
+                content_type_id=ContentType.objects.get_for_model(
+                    moderated_submission
+                ).pk,
+                object_id=moderated_submission.pk,
+                object_repr=str(moderated_submission),
+                action_flag=CHANGE,
+                change_message=custom_action_code,
+            )
+            return HttpResponseRedirect(redirect_url)
+
+        elif custom_action_code == "reject":
             obj.status = obj.Statuses.REJECTED_MODERATOR
             obj.save()
-        return super().response_change(request, obj)
+            return None
 
 
 class VoteInline(admin.TabularInline):
@@ -107,8 +141,15 @@ class VoteInline(admin.TabularInline):
 
 
 @admin.register(models.ModeratedSubmission)
-class ModeratedSubmissionAdmin(SavesLastModifiedByMixin, admin.ModelAdmin):
-    fields = ["submission", "target_url", "title", "description", "status"]
+class ModeratedSubmissionAdmin(SavesLastModifiedByMixin, CustomActionsModelAdmin):
+    fields = [
+        "submission",
+        "_submission",
+        "target_url",
+        "title",
+        "description",
+        "status",
+    ]
     list_display = [
         "date_created",
         "last_updated",
@@ -137,21 +178,47 @@ class ModeratedSubmissionAdmin(SavesLastModifiedByMixin, admin.ModelAdmin):
 
     def _submission(self, moderated_submission: models.ModeratedSubmission):
         if moderated_submission.submission:
-            submission_id = moderated_submission.submission.id
-            url = reverse(
-                "admin:news_moderatedsubmission_change",
-                kwargs={"object_id": submission_id},
-            )
-            return mark_safe(
-                f'<a href="{url}">{submission_id} {moderated_submission.submission.title}</a>'
-            )
+            url = link_to_submission(moderated_submission.submission)
+            return mark_safe(f'<a href="{url}">{moderated_submission.submission}</a>')
         return None
+
+    _submission.short_description = "Submission link"
 
     def get_readonly_fields(self, request, obj=None):
         if obj:  # This is the case when obj is already created i.e. it's an edit
-            return ["submission"]
+            return ["_submission", "submission"]
         else:
-            return []
+            return [
+                "_submission",
+            ]
+
+    def get_custom_admin_actions(
+        self, request, context, add=False, change=False, form_url="", obj=None,
+    ):
+        if obj and obj.status == obj.Statuses.NEW:
+            return {"publish": "Publish as article"}
+        return {}
+
+    def custom_action_called(self, request, custom_action_code, obj=None):
+        if custom_action_code == "publish":
+            article = obj.move_to_article()
+            # redirect to hte ModeratedSubmission page for editing
+            redirect_url = link_to_article(article)
+            # log it into the django admin history
+            LogEntry.objects.log_action(
+                user_id=request.user.pk,
+                content_type_id=ContentType.objects.get_for_model(article).pk,
+                object_id=article.pk,
+                object_repr=str(article),
+                action_flag=CHANGE,
+                change_message=custom_action_code,
+            )
+            return HttpResponseRedirect(redirect_url)
+
+        elif custom_action_code == "reject":
+            obj.status = obj.Statuses.REJECTED_MODERATOR
+            obj.save()
+            return None
 
 
 @admin.register(models.Vote)
@@ -179,5 +246,44 @@ class VoteAdmin(SavesOwnerMixin, admin.ModelAdmin):
 
 @admin.register(models.Article)
 class ArticleAdmin(admin.ModelAdmin):
-    pass
+    fields = [
+        "date_created",
+        "last_updated",
+        "title",
+        "description",
+        "target_url",
+        "submitter",
+        "moderated_submission",
+    ]
+    list_display = [
+        "date_created",
+        "last_updated",
+        "title",
+        "description",
+        "target_url",
+        "submitter",
+        "_votes",
+    ]
+    list_filter = [
+        "date_created",
+        "last_updated",
+        "submitter",
+        "moderated_submission__last_modified_by",
+    ]
+    readonly_fields = [
+        "submitter",
+        "moderated_submission",
+        "last_updated",
+        "date_created",
+    ]
+
+    def _votes(self, article: models.Article):
+        votes = [
+            models.Vote.Values(vote.value).label
+            for vote in article.moderated_submission.votes.all()
+            if article and article.moderated_submission
+        ]
+        return mark_safe(
+            f'<a href="{link_to_moderated_submission(article.moderated_submission)}">{"".join(votes)}</a>'
+        )
 
