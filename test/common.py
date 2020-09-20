@@ -17,32 +17,36 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 
 
-def _user(entity: str, prefix: str, suffix: str, perms: List[Permission]):
+def _user(
+    entity: str, prefix: str, suffix: str, perms: List[Permission], admin: bool = False
+):
     groupname = f"{prefix}-{entity}{suffix}"
     username = f"{prefix}-{entity}{suffix}"
     group, _ = Group.objects.get_or_create(name=groupname)
     group.save()
     group.permissions.add(*Permission.objects.filter(codename__in=perms))
-    if not get_user_model().objects.filter(username=username):
-        user, _ = get_user_model().objects.get_or_create(
-            username=username,
-            email="nothing@example.com",
-            password=f"x{random.random()}X",
-        )
+    user, _ = get_user_model().objects.get_or_create(
+        username=username,
+        email="nothing@example.com",
+        password=f"x{random.random()}X",
+    )
+    if admin and not user.is_staff:
+        user.is_staff = True
+        user.save()
     if not group in user.groups.all():
         user.groups.add(group)
     return user
 
 
-def ro_for(models: List[Model], suffix: str = ""):
+def ro_for(models: List[Model], suffix: str = "", admin: bool = False):
     perms = []
     for model in models:
         entity = model._meta.model_name
         perms += [f"view_{entity}"]
-    return _user(entity, "ro", suffix, perms)
+    return _user(entity, "ro", suffix, perms, admin)
 
 
-def rw_for(models: List[Model], suffix: str = ""):
+def rw_for(models: List[Model], suffix: str = "", admin: bool = False):
     perms = []
     for model in models:
         entity = model._meta.model_name
@@ -53,4 +57,4 @@ def rw_for(models: List[Model], suffix: str = ""):
             f"delete_{entity}",
         ]
 
-    return _user(entity, "rw", suffix, perms)
+    return _user(entity, "rw", suffix, perms, admin)

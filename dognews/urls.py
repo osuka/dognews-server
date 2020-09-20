@@ -29,7 +29,7 @@ from rest_framework_simplejwt.views import (
 )
 
 # from django.contrib.auth.models import Group, Permission
-from news.views import SubmissionViewSet, UserViewSet
+from news.views import SubmissionViewSet, UserViewSet, ModeratedSubmissionViewSet
 
 
 # this is a router that can help with nested view lookups byt concatenating
@@ -39,6 +39,7 @@ from news.views import SubmissionViewSet, UserViewSet
 # Here we define newsItem and /newsItem/ID/ratings
 router = ExtendedDefaultRouter(trailing_slash=False)
 router.register(r"submissions", SubmissionViewSet)
+router.register(r"moderatedsubmissions", ModeratedSubmissionViewSet)
 router.register(r"users", UserViewSet)
 # router.register(r'groups', GroupViewSet)
 

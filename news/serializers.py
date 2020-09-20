@@ -5,7 +5,7 @@ from collections import OrderedDict
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from rest_framework import serializers
-from .models import Submission
+from .models import Submission, ModeratedSubmission
 
 # pylint: disable=missing-class-docstring
 
@@ -77,14 +77,20 @@ class ModeratedSubmissionSerializer(
     NonNullModelSerializer, serializers.HyperlinkedModelSerializer
 ):
     class Meta:
-        model = Submission
+        model = ModeratedSubmission
         exclude = []
         read_only_fields = [
-            "owner",
+            "submission",
+            "last_modified_by",
             "status",
             "date_created",
             "last_updated",
             "submission",
             "fetched_page",
             "domain",
+            "bot_title",
+            "bot_description",
+            "bot_summary",
+            "bot_sentiment",
+            "bot_thumbnail",
         ]

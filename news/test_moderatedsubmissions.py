@@ -4,6 +4,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
 from .models import Submission, ModeratedSubmission, Article
+from .test_submissions import sample_submission
 
 
 class ModeratedSubmissionModelTests(TestCase):
@@ -74,45 +75,97 @@ class ModeratedSubmissionModelTests(TestCase):
 # ------------------------------------------------------
 
 
-# class ModeratedSubmissionAPITests(APITestCase):
-#     """
-#     External REST interface tests
-#     """
+class ModeratedSubmissionAPITests(APITestCase):
+    """
+    External REST interface tests
+    """
 
-#     sample_submission = {
-#         "target_url": "https://google.com",
-#         "description": "this is a submission",
-#         "title": "new idea",
-#     }
+    def setUp(self):
+        self.rw_user = rw_for([Submission, ModeratedSubmission])
+        self.ro_user = ro_for([Submission, ModeratedSubmission])
+        self.rw_admin = rw_for(
+            [Submission, ModeratedSubmission], suffix="admin", admin=True
+        )
 
-#     def setUp(self):
-#         self.rw_user = rw_for(Submission)
-#         self.ro_user = ro_for(Submission)
+    def as_user(self, user):
+        """ Peform remaining operations as a user that has the permission required """
+        self.client.force_authenticate(user)  # pylint: disable=no-member
 
-#     def as_user(self, user):
-#         """ Peform remaining operations as a user that has the permission required """
-#         self.client.force_authenticate(user)  # pylint: disable=no-member
+    def test_default_unauthorized(self):
+        """ without authorization header, all is rejected """
+        endpoints = ["moderatedsubmissions"]
+        for model in endpoints:
+            response = self.client.post(
+                f"/{model}", {"anything": "blah blah"}, follow=False
+            )
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-#     def test_default_unauthorized(self):
-#         """ without authorization header, all is rejected """
-#         endpoints = ["submissions"]
-#         for model in endpoints:
-#             response = self.client.post(
-#                 f"/{model}", {"anything": "blah blah"}, follow=False
-#             )
-#             self.assertEqual(
-#                 response.status_code, status.HTTP_401_UNAUTHORIZED, response.data
-#             )
+    def test_cant_create_item(self):
+        """Can't create one item even if the user has 'add' permission.
+        The only way is to follow the life cycle submission -> mod submission
+        POST /moderatedsubmission  --> 201
+        """
+        self.as_user(self.rw_user)
+        response = self.client.post(
+            "/moderatedsubmissions", {"target_url": "https://google.com/3342"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
+        self.assertEqual(ModeratedSubmission.objects.count(), 0)
 
-#     def test_testuser_create_item(self):
-#         """Can create one item if the user has 'add' permission
-#         POST /newsItem  --> 201
-#         """
-#         self.as_user(self.rw_user)
-#         response = self.client.post("/submissions", self.sample_submission)
-#         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
-#         self.assertEqual(Submission.objects.count(), 1)
-#         self.assertEqual(Submission.objects.get().target_url, "https://google.com")
+    def test_non_admins_cant_see_them(self):
+        """
+        GET /moderatedsubmission  --> 200
+        """
+        self.as_user(self.rw_user)
+        response = self.client.get("/moderatedsubmissions")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admins_cant_see_them(self):
+        """
+        GET /moderatedsubmission  --> 200
+        """
+        self.as_user(self.rw_admin)
+        response = self.client.get("/moderatedsubmissions")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertListEqual(response.data["results"], [])
+        submission: Submission = Submission.objects.create(**sample_submission)
+        submission.move_to_moderation()
+        response = self.client.get("/moderatedsubmissions")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(len(response.data["results"]), 1)
+        [retrieved] = response.data["results"]
+        self.assertEqual(retrieved["target_url"], sample_submission["target_url"])
+        self.assertNotEqual(retrieved["date_created"], submission.date_created)
+
+    def test_modify_fields(self):
+        """
+        PATCH /moderatedsubmission/<id>  --> 200
+        """
+        self.as_user(self.rw_admin)
+        submission: Submission = Submission.objects.create(**sample_submission)
+        moderated_submission: ModeratedSubmission = submission.move_to_moderation()
+        # modifying bot fields gots ignored
+        response = self.client.patch(
+            f"/moderatedsubmissions/{moderated_submission.id}",
+            data={"bot_summary": "a summary"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        moderated_submission.refresh_from_db()
+        self.assertIsNone(moderated_submission.bot_summary)
+
+        # can modify target and description fields
+        response = self.client.patch(
+            f"/moderatedsubmissions/{moderated_submission.id}",
+            data={
+                "target_url": "https://yahoo.co.uk/11234",
+                "description": "another desc",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        moderated_submission.refresh_from_db()
+        self.assertEqual(moderated_submission.target_url, "https://yahoo.co.uk/11234")
+        self.assertEqual(moderated_submission.description, "another desc")
+
 
 #     def test_cannot_create_item(self):
 #         """Can create one item if the user doesn't have the 'add' permission but is otherwise logged in

@@ -5,6 +5,12 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from .models import Submission, ModeratedSubmission
 
+sample_submission = {
+    "target_url": "https://google.com",
+    "description": "this is a submission",
+    "title": "new idea",
+}
+
 
 class SubmissionModelTests(TestCase):
     """
@@ -60,12 +66,6 @@ class SubmissionAPITests(APITestCase):
     External REST interface tests
     """
 
-    sample_submission = {
-        "target_url": "https://google.com",
-        "description": "this is a submission",
-        "title": "new idea",
-    }
-
     def setUp(self):
         self.rw_user = rw_for([Submission])
         self.ro_user = ro_for([Submission])
@@ -90,7 +90,7 @@ class SubmissionAPITests(APITestCase):
         POST /newsItem  --> 201
         """
         self.as_user(self.rw_user)
-        response = self.client.post("/submissions", self.sample_submission)
+        response = self.client.post("/submissions", sample_submission)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         self.assertEqual(Submission.objects.count(), 1)
         self.assertEqual(Submission.objects.get().target_url, "https://google.com")
@@ -100,7 +100,7 @@ class SubmissionAPITests(APITestCase):
         POST /newsItem  --> 403
         """
         self.as_user(self.ro_user)
-        response = self.client.post("/submissions", self.sample_submission)
+        response = self.client.post("/submissions", sample_submission)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
 
     def test_can_list_empty_items(self):
@@ -118,7 +118,7 @@ class SubmissionAPITests(APITestCase):
         GET /newsItem
         """
         self.as_user(self.rw_user)
-        response = self.client.post("/submissions", self.sample_submission)
+        response = self.client.post("/submissions", sample_submission)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
 
         self.as_user(self.ro_user)
@@ -139,7 +139,7 @@ class SubmissionAPITests(APITestCase):
         page_size = 50  # from settings.py, rest framework settings
         self.as_user(self.rw_user)
         for i in range(0, int(page_size * 2.5)):
-            item = self.sample_submission.copy()
+            item = sample_submission.copy()
             item["target_url"] = f"https://google.com/?{i}"
             response = self.client.post("/submissions", item)
 
@@ -185,7 +185,7 @@ class SubmissionAPITests(APITestCase):
         GET /submissions
         """
         self.as_user(self.rw_user)
-        response = self.client.post("/submissions", self.sample_submission)
+        response = self.client.post("/submissions", sample_submission)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
 
         itemurl = response.data["url"]
@@ -210,7 +210,7 @@ class SubmissionAPITests(APITestCase):
         GET /submissions
         """
         self.as_user(self.rw_user)
-        response = self.client.post("/submissions", self.sample_submission)
+        response = self.client.post("/submissions", sample_submission)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
 
         itemurl = response.data["url"]
@@ -236,11 +236,9 @@ class SubmissionAPITests(APITestCase):
     def test_cant_do_anything_public(self):
         """ A public user (unauthenticated) can't see anything """
         self.as_user(self.rw_user)
-        response = self.client.post(
-            "/submissions", self.sample_submission, format="json"
-        )
+        response = self.client.post("/submissions", sample_submission, format="json")
         itemurl = response.data["url"]
-        # item = Submission.objects.get(target_url=self.sample_submission["target_url"])
+        # item = Submission.objects.get(target_url=sample_submission["target_url"])
         self.client.logout()
         forbidden = ["/submissions", f"{itemurl}"]
         for url in forbidden:

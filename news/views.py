@@ -3,10 +3,16 @@ Exposed API for handling news, publicly published, restricted
 by auth
 """
 from rest_framework import viewsets, permissions
+from rest_framework.exceptions import PermissionDenied
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from .serializers import SubmissionSerializer, UserSerializer, GroupSerializer
-from .models import Submission
+from .serializers import (
+    SubmissionSerializer,
+    UserSerializer,
+    GroupSerializer,
+    ModeratedSubmissionSerializer,
+)
+from .models import Submission, ModeratedSubmission
 
 # pylint: disable=missing-class-docstring
 
@@ -33,7 +39,11 @@ class IsOwnerOrStaff(permissions.BasePermission):
             or view.action == "partial_update"
             or view.action == "destroy"
         ):
-            return obj.owner == request.user or request.user.is_staff
+            if request.user.is_staff:
+                return True
+            if hasattr(obj, "owner") and obj.owner == request.user:
+                return True
+            return False
         return True
 
 
@@ -50,22 +60,39 @@ class GroupViewSet(viewsets.ModelViewSet):
     serializer_class = GroupSerializer
 
 
-default_permissions = [
-    IsAuthenticated,
-    IsOwnerOrStaff,
-    permissions.DjangoModelPermissions,
-]
-
-
 class SubmissionViewSet(viewsets.ModelViewSet):
     """
     Submitted articles for review
     """
 
-    permission_classes = default_permissions
+    permission_classes = [
+        IsAuthenticated,
+        IsOwnerOrStaff,
+        permissions.DjangoModelPermissions,
+    ]
+
     queryset = Submission.objects.all()
     serializer_class = SubmissionSerializer
 
     def perform_create(self, serializer):
         # add current user if missing
         serializer.save(owner=self.request.user)
+
+
+class ModeratedSubmissionViewSet(viewsets.ModelViewSet):
+    """
+    Accepted articles in moderation
+    """
+
+    permission_classes = [
+        IsAuthenticated,
+        permissions.IsAdminUser,  # TODO: add "IsModerator"
+        permissions.DjangoModelPermissions,
+    ]
+    queryset = ModeratedSubmission.objects.all()
+    serializer_class = ModeratedSubmissionSerializer
+
+    def perform_create(self, serializer):
+        # these can only be created by moving a submission
+        # to moderation, not directly
+        raise PermissionDenied()
