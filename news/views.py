@@ -6,6 +6,7 @@ from rest_framework import viewsets, permissions
 from rest_framework.exceptions import PermissionDenied
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from dogauth.permissions import IsAuthenticated, IsOwnerOrStaff, IsModeratorOrStaff
 from .serializers import (
     SubmissionSerializer,
     UserSerializer,
@@ -15,36 +16,6 @@ from .serializers import (
 from .models import Submission, ModeratedSubmission
 
 # pylint: disable=missing-class-docstring
-
-# ---------- common to be moved elsewhere
-
-
-class IsAuthenticated(permissions.BasePermission):
-    """Rejects all operations if the user is not authenticated."""
-
-    def has_permission(self, request, view):
-        return request.user.is_authenticated
-
-
-# an example of a per-object permission
-class IsOwnerOrStaff(permissions.BasePermission):
-    """Allows update/partial_updated/destroy if the user is in the staff group OR if the model has
-    a property called 'user' and its value equals the request user.
-    Rejects all operations if the user is not authenticated.
-    """
-
-    def has_object_permission(self, request, view, obj):
-        if (
-            view.action == "update"
-            or view.action == "partial_update"
-            or view.action == "destroy"
-        ):
-            if request.user.is_staff:
-                return True
-            if hasattr(obj, "owner") and obj.owner == request.user:
-                return True
-            return False
-        return True
 
 
 # --------------------------
@@ -86,7 +57,7 @@ class ModeratedSubmissionViewSet(viewsets.ModelViewSet):
 
     permission_classes = [
         IsAuthenticated,
-        permissions.IsAdminUser,  # TODO: add "IsModerator"
+        IsModeratorOrStaff,
         permissions.DjangoModelPermissions,
     ]
     queryset = ModeratedSubmission.objects.all()

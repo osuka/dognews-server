@@ -21,3 +21,5 @@ drf-yasg-stubs
 celery-stubs
 boto3-stubs
 
+# to generate model graphs
+pydotplus

@@ -1,5 +1,6 @@
 """ Test cases for Submission models """
 from test.common import ro_for, rw_for
+from django.contrib.auth.models import Group
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -86,6 +87,9 @@ class ModeratedSubmissionAPITests(APITestCase):
         self.rw_admin = rw_for(
             [Submission, ModeratedSubmission], suffix="admin", admin=True
         )
+        self.rw_mod = rw_for([Submission, ModeratedSubmission], suffix="mod")
+        group, _ = Group.objects.get_or_create(name="Moderators")
+        self.rw_mod.groups.add(group)
 
     def as_user(self, user):
         """ Peform remaining operations as a user that has the permission required """
@@ -112,15 +116,53 @@ class ModeratedSubmissionAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
         self.assertEqual(ModeratedSubmission.objects.count(), 0)
 
-    def test_non_admins_cant_see_them(self):
+    def test_non_admins_can_see_them(self):
         """
         GET /moderatedsubmission  --> 200
         """
         self.as_user(self.rw_user)
         response = self.client.get("/moderatedsubmissions")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_admins_cant_see_them(self):
+    def test_non_admins_cant_patch_them(self):
+        """
+        PATCH /moderatedsubmission/{id}  --> 200
+        """
+        self.as_user(self.rw_user)
+        response = self.client.get("/moderatedsubmissions")
+        submission: Submission = Submission.objects.create(**sample_submission)
+        moderated_submission: ModeratedSubmission = submission.move_to_moderation()
+        response = self.client.get("/moderatedsubmissions")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(len(response.data["results"]), 1)
+        [retrieved] = response.data["results"]
+
+        response = self.client.patch(retrieved["url"], {"description": "oops"})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        moderated_submission.refresh_from_db()
+        self.assertEqual(
+            moderated_submission.description, sample_submission["description"]
+        )
+
+    def test_admins_can_patch_them(self):
+        """
+        PATCH /moderatedsubmission/{id}  --> 200
+        """
+        self.as_user(self.rw_admin)
+        response = self.client.get("/moderatedsubmissions")
+        submission: Submission = Submission.objects.create(**sample_submission)
+        moderated_submission: ModeratedSubmission = submission.move_to_moderation()
+        response = self.client.get("/moderatedsubmissions")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(len(response.data["results"]), 1)
+        [retrieved] = response.data["results"]
+
+        response = self.client.patch(retrieved["url"], {"description": "oops"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        moderated_submission.refresh_from_db()
+        self.assertEqual(moderated_submission.description, "oops")
+
+    def test_admins_can_see_them(self):
         """
         GET /moderatedsubmission  --> 200
         """
@@ -137,11 +179,11 @@ class ModeratedSubmissionAPITests(APITestCase):
         self.assertEqual(retrieved["target_url"], sample_submission["target_url"])
         self.assertNotEqual(retrieved["date_created"], submission.date_created)
 
-    def test_modify_fields(self):
+    def test_mods_modify_fields(self):
         """
         PATCH /moderatedsubmission/<id>  --> 200
         """
-        self.as_user(self.rw_admin)
+        self.as_user(self.rw_mod)
         submission: Submission = Submission.objects.create(**sample_submission)
         moderated_submission: ModeratedSubmission = submission.move_to_moderation()
         # modifying bot fields gots ignored
@@ -165,160 +207,3 @@ class ModeratedSubmissionAPITests(APITestCase):
         moderated_submission.refresh_from_db()
         self.assertEqual(moderated_submission.target_url, "https://yahoo.co.uk/11234")
         self.assertEqual(moderated_submission.description, "another desc")
-
-
-#     def test_cannot_create_item(self):
-#         """Can create one item if the user doesn't have the 'add' permission but is otherwise logged in
-#         POST /newsItem  --> 403
-#         """
-#         self.as_user(self.ro_user)
-#         response = self.client.post("/submissions", self.sample_submission)
-#         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, response.data)
-
-#     def test_can_list_empty_items(self):
-#         """Can list items if the user has 'view' permission when there are no items
-#         GET /newsItem
-#         """
-#         self.as_user(self.ro_user)
-#         response = self.client.get("/submissions")
-#         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-#         self.assertEqual(response.data["count"], 0)
-
-#     def test_can_list_one_item(self):
-#         """Can list items if the user has 'view' permission when there's one item
-#         POST /newsItem
-#         GET /newsItem
-#         """
-#         self.as_user(self.rw_user)
-#         response = self.client.post("/submissions", self.sample_submission)
-#         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
-
-#         self.as_user(self.ro_user)
-#         response = self.client.get("/submissions")
-#         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-#         self.assertEqual(response.data["count"], 1)
-#         self.assertEqual(
-#             response.data["results"][0]["target_url"], "https://google.com"
-#         )
-
-#     def test_can_paginate_items(self):
-#         """Can list items and navigate throught them via pagination
-#         POST /submissions  (*n)
-#         GET /submissions
-#         GET /submissions?offset=XXX
-#         GET /submissions?offset=XXX
-#         """
-#         page_size = 50  # from settings.py, rest framework settings
-#         self.as_user(self.rw_user)
-#         for i in range(0, int(page_size * 2.5)):
-#             item = self.sample_submission.copy()
-#             item["target_url"] = f"https://google.com/?{i}"
-#             response = self.client.post("/submissions", item)
-
-#         # first page
-#         self.as_user(self.ro_user)
-#         response = self.client.get("/submissions", follow=True)
-#         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-#         self.assertEqual(response.data["count"], page_size * 2.5)
-#         self.assertIn(f"limit={page_size}", response.data["next"])
-#         self.assertIn(f"offset={page_size}", response.data["next"])
-#         self.assertEqual(len(response.data["results"]), page_size)
-#         self.assertEqual(
-#             response.data["results"][0]["target_url"], "https://google.com/?0"
-#         )
-
-#         # second page
-#         response = self.client.get(response.data["next"], follow=True)
-#         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-#         self.assertEqual(response.data["count"], page_size * 2.5)
-#         self.assertIn(f"limit={page_size}", response.data["next"])
-#         self.assertIn(f"offset={page_size * 2}", response.data["next"])
-#         self.assertEqual(len(response.data["results"]), page_size)
-#         self.assertEqual(
-#             response.data["results"][0]["target_url"],
-#             f"https://google.com/?{page_size}",
-#         )
-
-#         # third and last page
-#         response = self.client.get(response.data["next"], follow=True)
-#         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-#         self.assertEqual(response.data["count"], page_size * 2.5)
-#         self.assertIsNone(response.data["next"])
-#         self.assertEqual(len(response.data["results"]), page_size * 0.5)
-#         self.assertEqual(
-#             response.data["results"][0]["target_url"],
-#             f"https://google.com/?{2*page_size}",
-#         )
-
-#     def test_can_modify_item(self):
-#         """Can modify a field of an item if the user has 'change' permission
-#         POST /submissions   --> id
-#         PATCH /submissions/<id>
-#         GET /submissions
-#         """
-#         self.as_user(self.rw_user)
-#         response = self.client.post("/submissions", self.sample_submission)
-#         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
-
-#         itemurl = response.data["url"]
-#         response = self.client.patch(
-#             f"{itemurl}",
-#             {"target_url": "https://googlito.com"},
-#             format="json",
-#         )
-#         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-#         self.assertEqual(Submission.objects.count(), 1)
-#         self.assertEqual(Submission.objects.get().target_url, "https://googlito.com")
-
-#         itemurl = response.data["url"]
-#         response = self.client.get(f"{itemurl}", format="json")
-#         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-#         self.assertEqual(response.data["target_url"], "https://googlito.com")
-
-#     def test_cant_modify_readonlyfields(self):
-#         """Can't modify a read onlyfield of an item even if the user has 'change' permission
-#         POST /submissions   --> id
-#         PATCH /submissions/<id>
-#         GET /submissions
-#         """
-#         self.as_user(self.rw_user)
-#         response = self.client.post("/submissions", self.sample_submission)
-#         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
-
-#         itemurl = response.data["url"]
-
-#         response = self.client.patch(
-#             f"{itemurl}",
-#             {"owner": self.ro_user.pk},
-#             format="json",
-#         )
-
-#         # rw fields are accepted but ignored by the serializer
-#         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-#         self.assertEqual(Submission.objects.count(), 1)
-#         self.assertEqual(Submission.objects.get().target_url, "https://google.com")
-
-#         itemurl = response.data["url"]
-#         response = self.client.get(f"{itemurl}", format="json")
-#         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-#         self.assertEqual(
-#             response.data["owner"], f"http://testserver/users/{self.rw_user.pk}"
-#         )
-
-#     def test_cant_do_anything_public(self):
-#         """ A public user (unauthenticated) can't see anything """
-#         self.as_user(self.rw_user)
-#         response = self.client.post(
-#             "/submissions", self.sample_submission, format="json"
-#         )
-#         itemurl = response.data["url"]
-#         # item = Submission.objects.get(target_url=self.sample_submission["target_url"])
-#         self.client.logout()
-#         forbidden = ["/submissions", f"{itemurl}"]
-#         for url in forbidden:
-#             response = self.client.get(url)
-#             self.assertEqual(
-#                 response.status_code,
-#                 status.HTTP_401_UNAUTHORIZED,
-#                 f"Should not be able to access {url}",
-#             )

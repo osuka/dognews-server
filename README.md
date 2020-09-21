@@ -142,6 +142,8 @@ a link to the original posted item.
 
 ## Translating the concepts into django Models
 
+![Auto generated model diagram](./models.png)
+
 ### User
 
 Extends django.contrib.auth.User but doesn't add anything to it at this stage
