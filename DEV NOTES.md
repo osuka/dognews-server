@@ -669,7 +669,7 @@ Some notes on ipython:
 ```bash
 apt install -y graphviz
 pip install pydotplus
-./manage.py graph_models -a -o models.png
+./manage.py graph_models -a -g -o models.png
 ```
 
 You can see the result here:
