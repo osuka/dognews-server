@@ -5,7 +5,7 @@ from collections import OrderedDict
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from rest_framework import serializers
-from .models import Submission, ModeratedSubmission
+from .models import Submission, ModeratedSubmission, Vote
 
 # pylint: disable=missing-class-docstring
 
@@ -93,4 +93,23 @@ class ModeratedSubmissionSerializer(
             "bot_summary",
             "bot_sentiment",
             "bot_thumbnail",
+        ]
+
+
+class VoteSerializer(NonNullModelSerializer):
+    """Votes are provided in Lists and don't link back to their
+    submissions once serialized"""
+
+    class Meta:
+        model = Vote
+        fields = [
+            "value",
+            "owner",
+            "date_created",
+            "last_updated",
+        ]
+        read_only_fields = [
+            "owner",
+            "date_created",
+            "last_updated",
         ]

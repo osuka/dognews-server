@@ -29,8 +29,14 @@ from rest_framework_simplejwt.views import (
 )
 
 # from django.contrib.auth.models import Group, Permission
-from news.views import SubmissionViewSet, UserViewSet, ModeratedSubmissionViewSet
+from news.views import (
+    SubmissionViewSet,
+    UserViewSet,
+    ModeratedSubmissionViewSet,
+    VoteViewSet,
+)
 
+urlpatterns = []
 
 # this is a router that can help with nested view lookups byt concatenating
 # calls to 'register' for sub paths.
@@ -40,16 +46,17 @@ from news.views import SubmissionViewSet, UserViewSet, ModeratedSubmissionViewSe
 router = ExtendedDefaultRouter(trailing_slash=False)
 router.register(r"submissions", SubmissionViewSet)
 router.register(r"moderatedsubmissions", ModeratedSubmissionViewSet)
+urlpatterns += [
+    url(
+        r"^moderatedsubmissions/(?P<moderatedsubmission_pk>\d+)/votes$",
+        VoteViewSet.as_view({"get": "list", "post": "create"}),
+    ),
+]
+
 router.register(r"users", UserViewSet)
 # router.register(r'groups', GroupViewSet)
 
-urlpatterns = [
-    path("", include(router.urls)),
-    path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
-]
-
-
-urlpatterns = [
+urlpatterns += [
     path("admin/", admin.site.urls),
 ]
 

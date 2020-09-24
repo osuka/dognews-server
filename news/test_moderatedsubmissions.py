@@ -62,7 +62,7 @@ class ModeratedSubmissionModelTests(TestCase):
             target_url=target,
             description="this is a submission",
             title="url title",
-            owner=rw_for([Submission]),
+            owner=rw_for([Submission], "user2"),
         )
         moderated_submission: ModeratedSubmission = submission.move_to_moderation()
         moderated_submission.status = (

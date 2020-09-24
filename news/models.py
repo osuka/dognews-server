@@ -210,6 +210,15 @@ class ModeratedSubmission(models.Model):
         self.save()
         return article
 
+    def vote(self, user, vote_value):
+        """Register a vote by a user - if it has already voted, the new vote
+        replaces the vote value of the previous one"""
+        vote, _ = self.votes.get_or_create(owner=user)
+        if vote.value != vote_value:
+            vote.value = vote_value
+            vote.save()
+        return vote
+
     # + ratings: is a one-to-many relation, see Rating
     def __str__(self):
         return f"{self.id} ({self.target_url[:20]})"

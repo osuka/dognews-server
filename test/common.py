@@ -17,11 +17,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
 
 
-def _user(
-    entity: str, prefix: str, suffix: str, perms: List[Permission], admin: bool = False
-):
-    groupname = f"{prefix}-{entity}{suffix}"
-    username = f"{prefix}-{entity}{suffix}"
+def _user(prefix: str, suffix: str, perms: List[Permission], admin: bool = False):
+    groupname = f"{prefix}-{suffix}"
+    username = f"{prefix}-{suffix}"
     group, _ = Group.objects.get_or_create(name=groupname)
     group.save()
     group.permissions.add(*Permission.objects.filter(codename__in=perms))
@@ -43,7 +41,7 @@ def ro_for(models: List[Model], suffix: str = "", admin: bool = False):
     for model in models:
         entity = model._meta.model_name
         perms += [f"view_{entity}"]
-    return _user(entity, "ro", suffix, perms, admin)
+    return _user("ro", suffix + ("user" if not admin else "admin"), perms, admin)
 
 
 def rw_for(models: List[Model], suffix: str = "", admin: bool = False):
@@ -57,4 +55,4 @@ def rw_for(models: List[Model], suffix: str = "", admin: bool = False):
             f"delete_{entity}",
         ]
 
-    return _user(entity, "rw", suffix, perms, admin)
+    return _user("rw", suffix + ("user" if not admin else "admin"), perms, admin)
