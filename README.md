@@ -13,6 +13,32 @@ NOTE: Incompatibility between drf-extensions and django 3.1
 * Workaround until release:
   * `pip3 install https://github.com/chibisov/drf-extensions/archive/master.zip`
 
+## Quick commands
+
+```sh
+
+# init a local sqlite database
+DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py migrate
+
+# create a local superuser
+DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py createsuperuser
+
+# play with the server locally
+DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py runserver
+
+# browse the admin UI in your browser
+open http://127.0.0.1:8000/admin
+
+# browse the REST API
+open http://127.0.0.1:8000/swagger/
+
+# browse the REST API (alternative view using redoc)
+open http://127.0.0.1:8000/redoc/
+
+# generate open api spec in yaml
+DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py generateschema > openapi-schema.yml
+```
+
 ## Requirements
 
 This is a server to support 'Only dog news, a very simple news aggregator for me and my friends.

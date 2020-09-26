@@ -1,0 +1,266 @@
+info:
+  description: ''
+  title: ''
+  version: ''
+openapi: 3.0.0
+paths:
+  /moderatedsubmissions:
+    get:
+      description: Accepted articles in moderation
+      operationId: moderatedsubmissions_list
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          description: Number of results to return per page.
+          title: Limit
+          type: integer
+      - in: query
+        name: offset
+        schema:
+          description: The initial index from which to return the results.
+          title: Offset
+          type: integer
+      tags:
+      - moderatedsubmissions
+    post:
+      description: Accepted articles in moderation
+      operationId: moderatedsubmissions_create
+      tags:
+      - moderatedsubmissions
+  /moderatedsubmissions/{id}:
+    delete:
+      description: Accepted articles in moderation
+      operationId: moderatedsubmissions_delete
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this moderated submission.
+          title: ID
+          type: integer
+      tags:
+      - moderatedsubmissions
+    get:
+      description: Accepted articles in moderation
+      operationId: moderatedsubmissions_read
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this moderated submission.
+          title: ID
+          type: integer
+      tags:
+      - moderatedsubmissions
+    patch:
+      description: Accepted articles in moderation
+      operationId: moderatedsubmissions_partial_update
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this moderated submission.
+          title: ID
+          type: integer
+      tags:
+      - moderatedsubmissions
+    put:
+      description: Accepted articles in moderation
+      operationId: moderatedsubmissions_update
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this moderated submission.
+          title: ID
+          type: integer
+      tags:
+      - moderatedsubmissions
+  /submissions:
+    get:
+      description: Submitted articles for review
+      operationId: submissions_list
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          description: Number of results to return per page.
+          title: Limit
+          type: integer
+      - in: query
+        name: offset
+        schema:
+          description: The initial index from which to return the results.
+          title: Offset
+          type: integer
+      tags:
+      - submissions
+    post:
+      description: Submitted articles for review
+      operationId: submissions_create
+      tags:
+      - submissions
+  /submissions/{id}:
+    delete:
+      description: Submitted articles for review
+      operationId: submissions_delete
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this submission.
+          title: ID
+          type: integer
+      tags:
+      - submissions
+    get:
+      description: Submitted articles for review
+      operationId: submissions_read
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this submission.
+          title: ID
+          type: integer
+      tags:
+      - submissions
+    patch:
+      description: Submitted articles for review
+      operationId: submissions_partial_update
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this submission.
+          title: ID
+          type: integer
+      tags:
+      - submissions
+    put:
+      description: Submitted articles for review
+      operationId: submissions_update
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this submission.
+          title: ID
+          type: integer
+      tags:
+      - submissions
+  /users:
+    get:
+      operationId: users_list
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          description: Number of results to return per page.
+          title: Limit
+          type: integer
+      - in: query
+        name: offset
+        schema:
+          description: The initial index from which to return the results.
+          title: Offset
+          type: integer
+      tags:
+      - users
+    post:
+      operationId: users_create
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      operationId: users_delete
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this user.
+          title: ID
+          type: integer
+      tags:
+      - users
+    get:
+      operationId: users_read
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this user.
+          title: ID
+          type: integer
+      tags:
+      - users
+    patch:
+      operationId: users_partial_update
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this user.
+          title: ID
+          type: integer
+      tags:
+      - users
+    put:
+      operationId: users_update
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this user.
+          title: ID
+          type: integer
+      tags:
+      - users
+  /votes/{id}:
+    delete:
+      description: 'Votes detail and delete. We allow a subset of functionality, the
+        rest must go
+
+        through /moderatedsubmission/<pk>/votes'
+      operationId: votes_delete
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this vote.
+          title: ID
+          type: integer
+      tags:
+      - votes
+    get:
+      description: 'Votes detail and delete. We allow a subset of functionality, the
+        rest must go
+
+        through /moderatedsubmission/<pk>/votes'
+      operationId: votes_read
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          description: A unique integer value identifying this vote.
+          title: ID
+          type: integer
+      tags:
+      - votes
+servers:
+- url: ''

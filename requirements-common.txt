@@ -5,8 +5,8 @@ gunicorn
 # per object permissions framework
 rules
 
-# needed for ratings nested model
-drf-extensions
+# helper for nested models (not needed currently)
+#drf-extensions
 
 # needed for generation openapi schemas
 pyyaml

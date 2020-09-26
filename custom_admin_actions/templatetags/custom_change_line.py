@@ -1,4 +1,7 @@
-# Reference: https://stackoverflow.com/a/34899874
+"""
+ Add extra parameters on submit
+ Reference: https://stackoverflow.com/a/34899874
+"""
 from django import template
 
 register = template.Library()
@@ -20,4 +23,3 @@ def custom_submit_line(context):
     if context["original"]:
         ctx["original"] = context["original"]
     return ctx
-

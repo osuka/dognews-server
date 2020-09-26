@@ -96,18 +96,13 @@ class ModeratedSubmissionSerializer(
         ]
 
 
-class VoteSerializer(NonNullModelSerializer):
+class VoteSerializer(serializers.HyperlinkedModelSerializer):
     """Votes are provided in Lists and don't link back to their
     submissions once serialized"""
 
     class Meta:
         model = Vote
-        fields = [
-            "value",
-            "owner",
-            "date_created",
-            "last_updated",
-        ]
+        exclude = []
         read_only_fields = [
             "owner",
             "date_created",

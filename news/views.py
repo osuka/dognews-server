@@ -2,11 +2,17 @@
 Exposed API for handling news, publicly published, restricted
 by auth
 """
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, mixins
 from rest_framework.exceptions import PermissionDenied, NotFound
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from dogauth.permissions import IsAuthenticated, IsOwnerOrStaff, IsModeratorOrStaff
+from dogauth.permissions import (
+    IsAuthenticated,
+    IsOwnerOrStaff,
+    IsModeratorOrStaff,
+    IsOwnerOrModeratorOrStaff,
+)
 from .serializers import (
     SubmissionSerializer,
     UserSerializer,
@@ -70,49 +76,68 @@ class ModeratedSubmissionViewSet(viewsets.ModelViewSet):
         raise PermissionDenied()
 
 
-class VoteViewSet(viewsets.ModelViewSet):
+class VoteViewSet(
+    mixins.RetrieveModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet
+):
     """
-    Votes for a moderated submission - this is tied to its primary key
-    that must be passed as `moderatedsubmission_pk` kwarg
-    Voting is offered in a very narrow way, not really suitable for a Viewset:
-    * multiple posts from same users will update their vote
-    * no id back to submissions is returned for votes
+    Votes detail and delete. We allow a subset of functionality, the rest must go
+    through /moderatedsubmission/<pk>/votes
     """
 
-    # the queryset is narrowed down, it doesn't cover all
     queryset = Vote.objects.all().select_related("moderated_submission")
-    # queryset = Vote.objects.all()
     serializer_class = VoteSerializer
     permission_classes = [
         IsAuthenticated,
-        IsModeratorOrStaff,
+        IsOwnerOrModeratorOrStaff,
+        permissions.DjangoModelPermissions,
+    ]
+
+
+class ModeratedSubmissionVoteViewSet(
+    mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet
+):
+    """
+    Votes for a moderated submission - this is tied to its primary key
+    that must be passed as `moderatedsubmission_pk` kwarg
+    * multiple posts to the collection from same users will not create
+    multiple instances, instead subsequent posts will update their vote
+    """
+
+    queryset = Vote.objects.all().select_related("moderated_submission")
+    serializer_class = VoteSerializer
+    permission_classes = [
+        IsAuthenticated,
+        IsOwnerOrModeratorOrStaff,
         permissions.DjangoModelPermissions,
     ]
 
     def get_queryset(self, *args, **kwargs):  # pylint: disable=unused-argument
-        moderated_submission_id = self.kwargs.get("moderatedsubmission_pk")
-        try:
-            moderated_submission = ModeratedSubmission.objects.get(
-                id=moderated_submission_id
+        if "moderated_submission_pk" in self.kwargs:
+            modsub_id = self.kwargs.get("moderated_submission_pk")
+            return (
+                super()
+                .get_queryset(*args, **kwargs)
+                .filter(moderated_submission_id=modsub_id)
             )
-        except ModeratedSubmission.DoesNotExist as does_not_exist:
-            raise NotFound(
-                "The provided submission id does not exist"
-            ) from does_not_exist
-        return self.queryset.filter(moderated_submission=moderated_submission).order_by(
-            "last_updated"
-        )
+        return super().get_queryset(*args, **kwargs)
 
     def perform_create(self, serializer):
-        # we have a custom behaviour where a "double post" simply updates the previous
-        moderated_submission_id = self.kwargs.get("moderatedsubmission_pk")
-        try:
-            moderated_submission = ModeratedSubmission.objects.get(
-                id=moderated_submission_id
+        if "moderated_submission_pk" in self.kwargs:
+            modsub_id = self.kwargs.get("moderated_submission_pk")
+            if not ModeratedSubmission.objects.filter(id=modsub_id).exists():
+                raise NotFound(f"{modsub_id} does not exist")
+            moderated_submission: ModeratedSubmission = ModeratedSubmission.objects.get(
+                id=modsub_id
             )
-            moderated_submission.vote(self.request.user, serializer.data["value"])
-        except ModeratedSubmission.DoesNotExist as does_not_exist:
-            raise NotFound(
-                "The provided submission id does not exist"
-            ) from does_not_exist
-        return self.queryset.filter(moderated_submission=moderated_submission)
+            if moderated_submission.votes.filter(owner=self.request.user).exists():
+                # update
+                serializer.instance = moderated_submission.votes.get(
+                    owner=self.request.user  # we know only one will exist
+                )
+                serializer.save()
+            else:
+                serializer.save(
+                    moderated_submission_id=modsub_id, owner=self.request.user
+                )
+        else:
+            raise NotFound("Can only add via /moderatedsubmissions endpoint")

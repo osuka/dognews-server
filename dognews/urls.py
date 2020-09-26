@@ -19,7 +19,7 @@ from django.urls import include
 from django.conf.urls import url
 from rest_framework import permissions
 from rest_framework.authtoken import views as authviews
-from rest_framework_extensions.routers import ExtendedDefaultRouter
+from rest_framework.routers import SimpleRouter
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework_simplejwt.views import (
@@ -34,6 +34,7 @@ from news.views import (
     UserViewSet,
     ModeratedSubmissionViewSet,
     VoteViewSet,
+    ModeratedSubmissionVoteViewSet,
 )
 
 urlpatterns = []
@@ -43,14 +44,22 @@ urlpatterns = []
 # it adds parameters with a prefix of 'parent_lookup_' to self.kwargs
 
 # Here we define newsItem and /newsItem/ID/ratings
-router = ExtendedDefaultRouter(trailing_slash=False)
+router = SimpleRouter(trailing_slash=False)
 router.register(r"submissions", SubmissionViewSet)
 router.register(r"moderatedsubmissions", ModeratedSubmissionViewSet)
+router.register(r"votes", VoteViewSet)
 urlpatterns += [
     url(
-        r"^moderatedsubmissions/(?P<moderatedsubmission_pk>\d+)/votes$",
-        VoteViewSet.as_view({"get": "list", "post": "create"}),
+        r"^moderatedsubmissions/(?P<moderated_submission_pk>\d+)/votes$",
+        ModeratedSubmissionVoteViewSet.as_view({"get": "list", "post": "create"}),
+        # delete to the list deletes current user's vote
+        # post to the list adds/updates current user's vote
     ),
+    # url(
+    #     r"^moderatedsubmissions/(?P<moderatedsubmission_pk>\d+)/votes/(?P<pk>\d+)$",
+    #     VoteViewSet.as_view({"delete": "destroy", "get": "retrieve"}),
+    #     # delete to a specific vote deletes it, admins and mods can do this
+    # ),
 ]
 
 router.register(r"users", UserViewSet)
