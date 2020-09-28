@@ -32,7 +32,6 @@ ALLOWED_HOSTS = ["192.168.1.149", "dognewsserver.gatillos.com"]
 # Application definition
 
 INSTALLED_APPS = [
-    "dogauth",  # <-- custom user model
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -43,15 +42,12 @@ INSTALLED_APPS = [
     "custom_admin_actions",  # additional row of actions for ModelAdmins
     "news",
     "drf_yasg",  # <-- live documentation
-    "rules",  # <-- per object permissions
     "django_extensions",  # <-- extends manage.py
+    "dogauth",  # <-- custom user model
     "django.contrib.admin",  # <-- order is important for template overrides
 ]
 
-AUTHENTICATION_BACKENDS = (
-    "rules.permissions.ObjectPermissionBackend",
-    "django.contrib.auth.backends.ModelBackend",  # default
-)
+AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend",)  # default
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

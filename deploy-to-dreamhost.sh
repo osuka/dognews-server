@@ -16,7 +16,7 @@
 # panel with passenger support (or a similar setup)
 # ============================================================
 
-PYTHON_VERSION=3.7.3
+PYTHON_VERSION=3.8.2
 OPENSSL_VERSION=1.1.1
 ENVIRONMENT=dreamhost
 
@@ -71,16 +71,15 @@ function install_python() {
     # note: -Wl,-rpath=xxx ==> so the openssl module path is included in the python binary
     # and doesn't need an external LD_LIBRARY_PATH
 
-# # use our custom openssl install (inserting tabs gets complicated with an editor that removes TABS...)
+# use our custom openssl install (inserting tabs gets complicated with an editor that removes TABS...)
 # TAB="$(printf '\t')"
-    # cd Modules; \
-#     cat >Setup.local" <<EOL
+# cd Modules; \
+# cat >Setup.local" <<EOL
 # SSL=${TARGET_FOLDER}/openssl
 # _ssl _ssl.c \\
 # ${TAB}-DUSE_SSL -I\$(SSL)/include -I\$(SSL)/include/openssl \\
 # ${TAB}-L\$(SSL)/lib -lssl -lcrypto
-EOL
-
+# EOL
 
   ssh ${TARGET_USER}@${TARGET_HOST} \
     "cd Python-${PYTHON_VERSION}; \
@@ -123,7 +122,7 @@ EOL
 check_configuration
 
 echo "* Update project source"
-rsync --progress -r --size-only --exclude __pycache__ dognews restapi manage.py requirements-common.txt requirements-${ENVIRONMENT}.txt "${TARGET_USER}@${TARGET_HOST}:${TARGET_FOLDER}"/
+rsync --progress -r --size-only --exclude __pycache__ --exclude .ropeproject custom* dog* news restapi manage.py requirements-common.txt requirements-${ENVIRONMENT}.txt "${TARGET_USER}@${TARGET_HOST}:${TARGET_FOLDER}"/
 
 echo "* Check openssl"
 INSTALLED_SSL_VERSIONS=`ssh ${TARGET_USER}@${TARGET_HOST} readelf -V -W ${TARGET_FOLDER}/openssl/lib/libssl.so|grep 'Name:'|grep OPENSSL|sed 's/_/./g'`
@@ -145,7 +144,7 @@ if [[ "${INSTALLED_VENV}" != "ok" ]]; then
 fi
 
 echo "* Check dependencies"
-ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./.venv/bin/activate; pip install -r requirements-common.txt -r requirements-${ENVIRONMENT}.txt"
+ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./.venv/bin/activate; pip install -r requirements-${ENVIRONMENT}.txt"
 
 echo "* Run django migrations"
 ssh ${TARGET_USER}@${TARGET_HOST} "cd ${TARGET_FOLDER}; source ./.venv/bin/activate; export DJANGO_SETTINGS_MODULE=dognews.settings.${ENVIRONMENT}; python3 manage.py migrate"

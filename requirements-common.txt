@@ -3,7 +3,7 @@ djangorestframework>=3
 gunicorn
 
 # per object permissions framework
-rules
+#rules
 
 # helper for nested models (not needed currently)
 #drf-extensions
