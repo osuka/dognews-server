@@ -35,6 +35,7 @@ from news.views import (
     ModeratedSubmissionViewSet,
     VoteViewSet,
     ModeratedSubmissionVoteViewSet,
+    ArticleViewSet,
 )
 
 urlpatterns = []
@@ -55,12 +56,8 @@ urlpatterns += [
         # delete to the list deletes current user's vote
         # post to the list adds/updates current user's vote
     ),
-    # url(
-    #     r"^moderatedsubmissions/(?P<moderatedsubmission_pk>\d+)/votes/(?P<pk>\d+)$",
-    #     VoteViewSet.as_view({"delete": "destroy", "get": "retrieve"}),
-    #     # delete to a specific vote deletes it, admins and mods can do this
-    # ),
 ]
+router.register(r"articles", ArticleViewSet)
 
 router.register(r"users", UserViewSet)
 # router.register(r'groups', GroupViewSet)

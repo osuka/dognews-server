@@ -1,5 +1,6 @@
 """ Test cases for Submission models """
 from test.common import ro_for, rw_for
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import Group
 from django.test import TestCase
 from rest_framework import status
@@ -28,7 +29,7 @@ class ModeratedSubmissionModelTests(TestCase):
         moderated_submission: ModeratedSubmission = submission.move_to_moderation()
         self.assertEqual(moderated_submission.status, ModeratedSubmission.Statuses.NEW)
 
-        moderated_submission.move_to_article()
+        self.assertRaises(ValidationError, moderated_submission.move_to_article)
         self.assertEqual(
             Article.objects.filter(target_url=target).count(),
             0,
@@ -69,8 +70,8 @@ class ModeratedSubmissionModelTests(TestCase):
             ModeratedSubmission.Statuses.REJECTED_COULD_NOT_FETCH
         )
         moderated_submission.save()
-        article: Article = moderated_submission.move_to_article()
-        self.assertIsNone(article)
+        self.assertRaises(ValidationError, moderated_submission.move_to_article)
+        self.assertEqual(Article.objects.count(), 0)
 
 
 # ------------------------------------------------------

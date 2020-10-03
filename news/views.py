@@ -19,8 +19,9 @@ from .serializers import (
     GroupSerializer,
     ModeratedSubmissionSerializer,
     VoteSerializer,
+    ArticleSerializer,
 )
-from .models import Submission, ModeratedSubmission, Vote
+from .models import Submission, ModeratedSubmission, Vote, Article
 
 # pylint: disable=missing-class-docstring
 
@@ -141,3 +142,16 @@ class ModeratedSubmissionVoteViewSet(
                 )
         else:
             raise NotFound("Can only add via /moderatedsubmissions endpoint")
+
+
+class ArticleViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    """
+    Final accepted articles, read only view.
+    *Public*
+    """
+
+    queryset = Article.objects.all()
+    serializer_class = ArticleSerializer
+    permission_classes = []

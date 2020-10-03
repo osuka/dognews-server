@@ -1,5 +1,6 @@
 """ Test cases for Submission models """
 from test.common import ro_for, rw_for
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -54,8 +55,7 @@ class SubmissionModelTests(TestCase):
             owner=rw_for([Submission]),
             status=Submission.Statuses.REJECTED_BLACKLISTED_DOMAIN,
         )
-        moderated_submssion = submission.move_to_moderation()
-        self.assertIsNone(moderated_submssion)
+        self.assertRaises(ValidationError, submission.move_to_moderation)
 
 
 # ------------------------------------------------------

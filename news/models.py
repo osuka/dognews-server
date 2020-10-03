@@ -2,13 +2,14 @@
 Models to handle new submissions and their lifecycle to becoming Articles
 """
 
-from django.db import models
-from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
 import tldextract
+from dogauth.models import User
 
 # django permissions note:
 #
@@ -94,12 +95,12 @@ class Submission(models.Model):
 
     def move_to_moderation(self):
         """ Create a ModeratedSubmission associated to this submission, and return it """
+        if self.status != self.Statuses.NEW and self.status != self.Statuses.ACCEPTED:
+            raise ValidationError("Only non rejected submissions can be accepted")
         if self.status == self.Statuses.ACCEPTED:
             return ModeratedSubmission.objects.get(
                 target_url=self.target_url
             )  # already done
-        if self.status != self.Statuses.NEW:
-            return None  # was rejected
         self.status = self.Statuses.ACCEPTED
         moderated_submission = ModeratedSubmission.objects.create(
             submission=self,
@@ -144,7 +145,7 @@ class ModeratedSubmission(models.Model):
         max_length=10, choices=Statuses.choices, default=Statuses.NEW
     )
     last_modified_by = models.ForeignKey(
-        to=get_user_model(),
+        to=User,
         on_delete=models.SET_NULL,
         null=True,
         editable=False,
@@ -185,14 +186,14 @@ class ModeratedSubmission(models.Model):
             )
         super().save(force_insert, force_update, using, update_fields)
 
-    def move_to_article(self):
+    def move_to_article(self, approver: User = None):
         """Create an Article associated with this instance, and return it.
         If called twice, it will return the already created object"""
         target_url = self.target_url if self.target_url else self.submission.target_url
+        if self.status != self.Statuses.READY and self.status != self.Statuses.ACCEPTED:
+            raise ValidationError("Only READY submissions can be moved")
         if self.status == self.Statuses.ACCEPTED:
             return Article.objects.get(target_url=target_url)  # already exists
-        if self.status != self.Statuses.READY:
-            return None  # was rejected
         self.status = self.Statuses.ACCEPTED
         description = (
             self.description if self.description else self.submission.description
@@ -205,8 +206,9 @@ class ModeratedSubmission(models.Model):
             description=description,
             thumbnail=self.thumbnail,
             submitter=self.submission.owner,
+            approver=approver,
         )
-        article.save()
+        # article.save()
         self.save()
         return article
 
@@ -242,7 +244,7 @@ class Vote(models.Model):
         related_name="votes",
     )
     owner = models.ForeignKey(
-        to=get_user_model(),
+        to=User,
         on_delete=models.SET_NULL,
         null=True,
         editable=False,
@@ -282,7 +284,7 @@ class Article(models.Model):
         max_length=250, null=True, blank=True, default=None, editable=False
     )
     submitter = models.ForeignKey(
-        to=get_user_model(),
+        to=User,
         on_delete=models.SET_NULL,
         null=True,
         editable=False,
@@ -291,6 +293,14 @@ class Article(models.Model):
     moderated_submission = models.OneToOneField(
         to=ModeratedSubmission, on_delete=models.SET_NULL, null=True, editable=False
     )
+    approver = models.ForeignKey(
+        to=User,
+        on_delete=models.SET_NULL,
+        null=True,
+        editable=False,
+        related_name="approved_articles",
+    )
+
     last_updated = models.DateTimeField(auto_now=True, editable=False)
     date_created = models.DateTimeField(auto_now_add=True, editable=False)
 

@@ -5,7 +5,7 @@ from collections import OrderedDict
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from rest_framework import serializers
-from .models import Submission, ModeratedSubmission, Vote
+from .models import Submission, ModeratedSubmission, Vote, Article
 
 # pylint: disable=missing-class-docstring
 
@@ -107,4 +107,25 @@ class VoteSerializer(serializers.HyperlinkedModelSerializer):
             "owner",
             "date_created",
             "last_updated",
+        ]
+
+
+# --------------------------------------
+
+
+class ArticleSerializer(NonNullModelSerializer, serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Article
+        exclude = []
+
+        read_only_fields = [
+            "status",
+            "target_url",
+            "title",
+            "description",
+            "thumbnail",
+            "submitter",
+            "moderated_submission",
+            "last_updated",
+            "date_created",
         ]
