@@ -50,7 +50,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         permissions.DjangoModelPermissions,
     ]
 
-    queryset = Submission.objects.all()
+    queryset = Submission.objects.all().order_by("-date_created")
     serializer_class = SubmissionSerializer
 
     def perform_create(self, serializer):
@@ -68,7 +68,7 @@ class ModeratedSubmissionViewSet(viewsets.ModelViewSet):
         IsModeratorOrStaff,
         permissions.DjangoModelPermissions,
     ]
-    queryset = ModeratedSubmission.objects.all()
+    queryset = ModeratedSubmission.objects.all().order_by("-date_created")
     serializer_class = ModeratedSubmissionSerializer
 
     def perform_create(self, serializer):
@@ -85,7 +85,11 @@ class VoteViewSet(
     through /moderatedsubmission/<pk>/votes
     """
 
-    queryset = Vote.objects.all().select_related("moderated_submission")
+    queryset = (
+        Vote.objects.all()
+        .select_related("moderated_submission")
+        .order_by("-date_created")
+    )
     serializer_class = VoteSerializer
     permission_classes = [
         IsAuthenticated,
@@ -152,6 +156,6 @@ class ArticleViewSet(
     *Public*
     """
 
-    queryset = Article.objects.all()
+    queryset = Article.objects.all().order_by("-date_created")
     serializer_class = ArticleSerializer
     permission_classes = []
