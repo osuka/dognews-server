@@ -83,7 +83,8 @@ schema_view = get_schema_view(  # pylint: disable=invalid-name
         license=openapi.License(name="https://creativecommons.org/licenses/by-nd/3.0/"),
     ),
     public=True,
-    permission_classes=[permissions.AllowAny],
+    permission_classes = [permissions.AllowAny],
+
 )
 
 urlpatterns += [

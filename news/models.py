@@ -279,7 +279,7 @@ class Article(models.Model):
     )
     target_url = models.URLField(unique=True)
     title = models.CharField(max_length=120)
-    description = models.CharField(max_length=250)
+    description = models.CharField(max_length=512)
     thumbnail = models.CharField(
         max_length=250, null=True, blank=True, default=None, editable=False
     )

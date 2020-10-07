@@ -1,19 +1,23 @@
+"""
+Minimal UI
+"""
+
+from django import forms
+from django.urls import reverse
+from django.utils.safestring import mark_safe
 from django.http import HttpResponseRedirect
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry, ContentType, CHANGE
 from django.contrib.auth.models import Permission
+from custom_admin_actions.admin import CustomActionsModelAdmin
 from . import models
 
-from django import forms
-from django.urls import reverse
-from django.utils.html import format_html
-from django.utils.safestring import mark_safe
-
-from custom_admin_actions.admin import CustomActionsModelAdmin
-import tldextract
+# pylint: disable=missing-module-docstring, missing-function-docstring, missing-class-docstring
 
 
 def link_to_moderated_submission(moderated_submission: models.ModeratedSubmission):
+    if not moderated_submission:
+        return ""
     return reverse(
         "admin:%s_%s_change"
         % (
@@ -28,7 +32,10 @@ def link_to_moderated_submission(moderated_submission: models.ModeratedSubmissio
 def link_to_submission(submission: models.Submission):
     return reverse(
         "admin:%s_%s_change"
-        % (models.Submission._meta.app_label, models.Submission._meta.model_name,),
+        % (
+            models.Submission._meta.app_label,
+            models.Submission._meta.model_name,
+        ),
         args=(submission.pk,),
         current_app=admin.site.name,
     )
@@ -37,15 +44,18 @@ def link_to_submission(submission: models.Submission):
 def link_to_article(article: models.Article):
     return reverse(
         "admin:%s_%s_change"
-        % (models.Article._meta.app_label, models.Article._meta.model_name,),
+        % (
+            models.Article._meta.app_label,
+            models.Article._meta.model_name,
+        ),
         args=(article.pk,),
         current_app=admin.site.name,
     )
 
 
 class SavesLastModifiedByMixin:
-    """ Add this to an object that has a 'last_modified_by' datetime field, and it will be
-    set to the currently logged user when saving """
+    """Add this to an object that has a 'last_modified_by' datetime field, and it will be
+    set to the currently logged user when saving"""
 
     def save_model(self, request, obj, form, change):
         obj.last_modified_by = request.user
@@ -53,8 +63,8 @@ class SavesLastModifiedByMixin:
 
 
 class SavesOwnerMixin:
-    """ Add this to an object that has an 'owner' field that is a fk to User, and it will be set
-    to the currently logged user when creating it """
+    """Add this to an object that has an 'owner' field that is a fk to User, and it will be set
+    to the currently logged user when creating it"""
 
     def save_model(self, request, obj, form, change):
         if not obj.pk:
@@ -100,7 +110,13 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
     readonly_fields = ["owner", "status", "date_created", "last_updated"]
 
     def get_custom_admin_actions(
-        self, request, context, add=False, change=False, form_url="", obj=None,
+        self,
+        request,
+        context,
+        add=False,
+        change=False,
+        form_url="",
+        obj=None,
     ):
         if obj and obj.status == obj.Statuses.NEW:
             return {"start_moderation": "Move to Moderation", "reject": "Reject"}
@@ -193,7 +209,13 @@ class ModeratedSubmissionAdmin(SavesLastModifiedByMixin, CustomActionsModelAdmin
             ]
 
     def get_custom_admin_actions(
-        self, request, context, add=False, change=False, form_url="", obj=None,
+        self,
+        request,
+        context,
+        add=False,
+        change=False,
+        form_url="",
+        obj=None,
     ):
         if obj and obj.status == obj.Statuses.NEW:
             return {"publish": "Publish as article"}
@@ -244,17 +266,19 @@ class VoteAdmin(SavesOwnerMixin, admin.ModelAdmin):
             return []
 
 
+class ArticleForm(forms.ModelForm):
+    class Meta:
+        model = models.Article
+        exclude = []  # pylint: disable=modelform-uses-exclude
+
+    title = forms.CharField(widget=forms.Textarea(attrs={"cols": 120, "rows": 2}))
+    description = forms.CharField(widget=forms.Textarea(attrs={"cols": 120, "rows": 4}))
+
+
 @admin.register(models.Article)
 class ArticleAdmin(admin.ModelAdmin):
-    fields = [
-        "date_created",
-        "last_updated",
-        "title",
-        "description",
-        "target_url",
-        "submitter",
-        "moderated_submission",
-    ]
+    exclude = []
+    form = ArticleForm
     list_display = [
         "date_created",
         "last_updated",
@@ -271,19 +295,31 @@ class ArticleAdmin(admin.ModelAdmin):
         "moderated_submission__last_modified_by",
     ]
     readonly_fields = [
+        "thumbnail_preview",
+        "thumbnail",
+        "submitter_preview",
         "submitter",
         "moderated_submission",
         "last_updated",
         "date_created",
     ]
+    ordering = ["-date_created"]
+
+    def thumbnail_preview(self, obj):
+        url = f"https://onlydognews.com{obj.thumbnail}"
+        return mark_safe(f'<a href="{url}"><img src="{url}" width="128px"/></a>')
+
+    def submitter_preview(self, obj):
+        url = f"https://onlydognews.com/gfx/site/{obj.submitter}-logo.png"
+        return mark_safe(f'<a href="{url}"><img src="{url}" width="128px"/></a>')
 
     def _votes(self, article: models.Article):
-        votes = [
-            models.Vote.Values(vote.value).label
-            for vote in article.moderated_submission.votes.all()
-            if article and article.moderated_submission
-        ]
+        votes = []
+        if article.moderated_submission:
+            votes = [
+                models.Vote.Values(vote.value).label
+                for vote in article.moderated_submission.votes.all()
+            ]
         return mark_safe(
             f'<a href="{link_to_moderated_submission(article.moderated_submission)}">{"".join(votes)}</a>'
         )
-
