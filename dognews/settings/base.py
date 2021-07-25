@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "django_extensions",  # <-- extends manage.py
     "dogauth",  # <-- custom user model
     "django.contrib.admin",  # <-- order is important for template overrides
+    "admin_reorder",  # allows to change order in home page
 ]
 
 AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend",)  # default
@@ -57,6 +58,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "admin_reorder.middleware.ModelAdminReorderMiddleware",
 ]
 
 ROOT_URLCONF = "dognews.urls"
@@ -164,3 +166,48 @@ REST_FRAMEWORK = {
 SWAGGER_SETTINGS = {
     "DEFAULT_AUTO_SCHEMA_CLASS": "dogauth.views.SwaggerAutoSchema",
 }
+
+# since django 3.2 this can be customized
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
+# layout of the admin home page
+ADMIN_REORDER = {
+    "admin": [
+        {
+            "app": "auth",
+            "label": "Authentication and Authorisation",
+            "models": ("dogauth.User", "auth.Group", "auth.Permission"),
+        },
+        {
+            "app": "news",
+            "label": "Article Management",
+            "models": (
+                "news.Submission",
+                "news.ModeratedSubmission",
+                "news.Vote",
+                "news.Article",
+            ),
+        },
+    ],
+}
+
+# dict(
+#     # Keep original label and models
+#     "sites",
+#     # Rename app
+#     {"app": "auth", "label": "Authorisation"},
+#     # Reorder app models
+#     {"app": "auth", "models": ("dogauth.User", "auth.Group")},
+#     # # Exclude models
+#     # {"app": "auth", "models": ("auth.User",)},
+#     # # Cross-linked models
+#     # {"app": "auth", "models": ("auth.User", "sites.Site")},
+#     # # models with custom name
+#     # {
+#     #     "app": "auth",
+#     #     "models": (
+#     #         "auth.Group",
+#     #         {"model": "auth.User", "label": "Staff"},
+#     #     ),
+#     # },
+# )

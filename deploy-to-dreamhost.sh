@@ -16,8 +16,9 @@
 # panel with passenger support (or a similar setup)
 # ============================================================
 
-PYTHON_VERSION=3.8.2
-OPENSSL_VERSION=1.1.1
+PYTHON_VERSION=3.9.5
+OPENSSL_VERSION=1.1.1k
+OPENSSL_VERSION_CHECK=1.1.1
 ENVIRONMENT=dreamhost
 
 
@@ -127,7 +128,7 @@ rsync --progress -r --size-only --exclude __pycache__ --exclude .ropeproject cus
 echo "* Check openssl"
 INSTALLED_SSL_VERSIONS=`ssh ${TARGET_USER}@${TARGET_HOST} readelf -V -W ${TARGET_FOLDER}/openssl/lib/libssl.so|grep 'Name:'|grep OPENSSL|sed 's/_/./g'`
   # elf library versions are OPENSSL_1_1_1 hence changing _ to '.' for comparing
-if [[ ! "${INSTALLED_SSL_VERSIONS}" =~ "OPENSSL.${OPENSSL_VERSION}" ]]; then
+if [[ ! "${INSTALLED_SSL_VERSIONS}" =~ "OPENSSL.${OPENSSL_VERSION_CHECK}" ]]; then
   install_openssl
 fi
 

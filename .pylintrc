@@ -32,6 +32,8 @@ limit-inference-results=100
 # List of plugins (as comma separated values of python module names) to load,
 # usually to register additional checkers.
 load-plugins=pylint_django
+# this defines a particular DJANGO_SETTINGS_MODULE to use for pylint
+django-settings-module=dognews.settings.local
 
 # Pickle collected data for later comparisons.
 persistent=yes

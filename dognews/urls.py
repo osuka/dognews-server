@@ -14,9 +14,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, re_path
 from django.urls import include
-from django.conf.urls import url
 from rest_framework import permissions
 from rest_framework.authtoken import views as authviews
 from rest_framework.routers import SimpleRouter
@@ -50,7 +49,7 @@ router.register(r"submissions", SubmissionViewSet)
 router.register(r"moderatedsubmissions", ModeratedSubmissionViewSet)
 router.register(r"votes", VoteViewSet)
 urlpatterns += [
-    url(
+    re_path(
         r"^moderatedsubmissions/(?P<moderated_submission_pk>\d+)/votes$",
         ModeratedSubmissionVoteViewSet.as_view({"get": "list", "post": "create"}),
         # delete to the list deletes current user's vote
@@ -83,22 +82,21 @@ schema_view = get_schema_view(  # pylint: disable=invalid-name
         license=openapi.License(name="https://creativecommons.org/licenses/by-nd/3.0/"),
     ),
     public=True,
-    permission_classes = [permissions.AllowAny],
-
+    permission_classes=[permissions.AllowAny],
 )
 
 urlpatterns += [
-    url(
+    re_path(
         r"^swagger(?P<format>\.json|\.yaml)$",
         schema_view.without_ui(cache_timeout=0),
         name="schema-json",
     ),
-    url(
+    re_path(
         r"^swagger/$",
         schema_view.with_ui("swagger", cache_timeout=0),
         name="schema-swagger-ui",
     ),
-    url(
+    re_path(
         r"^redoc/$", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"
     ),
 ]
@@ -109,7 +107,7 @@ urlpatterns += [
 # note: we can also do
 #   ./manage.py drf_create_token <username>       (creates or retrieves)
 #   ./manage.py drf_create_token -r <username>      (regenerates)
-urlpatterns += [url(r"^auth/login", authviews.obtain_auth_token)]
+urlpatterns += [re_path(r"^auth/login", authviews.obtain_auth_token)]
 
 # For JWT Token authentication (remember this is a playground for me, there's not really a lot of need for JWT here!)
 urlpatterns += [

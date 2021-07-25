@@ -53,7 +53,7 @@ class Submission(models.Model):
     """
 
     class Statuses(models.TextChoices):
-        """ Lifecycle status """
+        """Lifecycle status"""
 
         NEW = "new", "Processing"
         ACCEPTED = "accepted", "Moved to moderation"
@@ -66,7 +66,7 @@ class Submission(models.Model):
         to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        editable=False,
+        editable=True,  # only via admin
         related_name="submissions",
     )
     title = models.CharField(max_length=120, blank=True, default="")
@@ -84,7 +84,7 @@ class Submission(models.Model):
 
     @property
     def domain(self):
-        """ Extract the domain piece of the URL, for display and blacklisting """
+        """Extract the domain piece of the URL, for display and blacklisting"""
         if self.target_url:
             try:
                 extracted = tldextract.extract(self.target_url)
@@ -94,7 +94,7 @@ class Submission(models.Model):
                 pass
 
     def move_to_moderation(self):
-        """ Create a ModeratedSubmission associated to this submission, and return it """
+        """Create a ModeratedSubmission associated to this submission, and return it"""
         if self.status != self.Statuses.NEW and self.status != self.Statuses.ACCEPTED:
             raise ValidationError("Only non rejected submissions can be accepted")
         if self.status == self.Statuses.ACCEPTED:
@@ -122,7 +122,7 @@ class ModeratedSubmission(models.Model):
     """
 
     class Statuses(models.TextChoices):
-        """ Lifecycle status """
+        """Lifecycle status"""
 
         NEW = "new", "Processing"
         READY = "ready", "Ready for review"
@@ -227,10 +227,10 @@ class ModeratedSubmission(models.Model):
 
 
 class Vote(models.Model):
-    """ Vote/rating provided by a user for a submitted item """
+    """Vote/rating provided by a user for a submitted item"""
 
     class Values(models.IntegerChoices):
-        """ Vote values are added when processing, so need to be numeric """
+        """Vote values are added when processing, so need to be numeric"""
 
         UP = 1, "👍"
         DOWN = -1, "👎"
@@ -269,7 +269,7 @@ class Article(models.Model):
     """
 
     class Statuses(models.TextChoices):
-        """ Lifecycle status """
+        """Lifecycle status"""
 
         VISIBLE = "visible", "Visible"
         HIDDEN = "hidden", "Hidden (moderation action)"

@@ -1,5 +1,5 @@
-Django>=3.1
-djangorestframework>=3
+Django~=3.1
+djangorestframework~=3.12
 gunicorn
 
 # per object permissions framework
@@ -24,3 +24,9 @@ djangorestframework-simplejwt
 # set of helpers for manage.py
 # check https://github.com/django-extensions/django-extensions
 django-extensions
+
+# nicer error messages
+pretty_errors
+
+# using own fork a admin_reorder since it's not updated by parent
+git+git://github.com/osuka/django-modeladmin-reorder@master

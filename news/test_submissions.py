@@ -46,7 +46,7 @@ class SubmissionModelTests(TestCase):
         self.assertEqual(submission.status, Submission.Statuses.ACCEPTED)
 
     def test_rejected_items_cant_be_moderated(self):
-        """We can't promote rejected submissions """
+        """We can't promote rejected submissions"""
         target = "https://google.com/1234"
         submission: Submission = Submission.objects.create(
             target_url=target,
@@ -71,11 +71,11 @@ class SubmissionAPITests(APITestCase):
         self.ro_user = ro_for([Submission])
 
     def as_user(self, user):
-        """ Peform remaining operations as a user that has the permission required """
+        """Peform remaining operations as a user that has the permission required"""
         self.client.force_authenticate(user)  # pylint: disable=no-member
 
     def test_default_unauthorized(self):
-        """ without authorization header, all is rejected """
+        """without authorization header, all is rejected"""
         endpoints = ["submissions"]
         for model in endpoints:
             response = self.client.post(
@@ -151,8 +151,10 @@ class SubmissionAPITests(APITestCase):
         self.assertIn(f"limit={page_size}", response.data["next"])
         self.assertIn(f"offset={page_size}", response.data["next"])
         self.assertEqual(len(response.data["results"]), page_size)
+        first = int(page_size * 2.5) - 1
         self.assertEqual(
-            response.data["results"][0]["target_url"], "https://google.com/?0"
+            response.data["results"][0]["target_url"],
+            f"https://google.com/?{first}",
         )
 
         # second page
@@ -162,9 +164,10 @@ class SubmissionAPITests(APITestCase):
         self.assertIn(f"limit={page_size}", response.data["next"])
         self.assertIn(f"offset={page_size * 2}", response.data["next"])
         self.assertEqual(len(response.data["results"]), page_size)
+        first = first - page_size  # is in reverse order
         self.assertEqual(
             response.data["results"][0]["target_url"],
-            f"https://google.com/?{page_size}",
+            f"https://google.com/?{first}",
         )
 
         # third and last page
@@ -173,9 +176,10 @@ class SubmissionAPITests(APITestCase):
         self.assertEqual(response.data["count"], page_size * 2.5)
         self.assertIsNone(response.data["next"])
         self.assertEqual(len(response.data["results"]), page_size * 0.5)
+        first = first - page_size
         self.assertEqual(
             response.data["results"][0]["target_url"],
-            f"https://google.com/?{2*page_size}",
+            f"https://google.com/?{first}",
         )
 
     def test_can_modify_item(self):
@@ -234,7 +238,7 @@ class SubmissionAPITests(APITestCase):
         )
 
     def test_cant_do_anything_public(self):
-        """ A public user (unauthenticated) can't see anything """
+        """A public user (unauthenticated) can't see anything"""
         self.as_user(self.rw_user)
         response = self.client.post("/submissions", sample_submission, format="json")
         itemurl = response.data["url"]

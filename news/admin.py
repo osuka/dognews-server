@@ -107,7 +107,12 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
     date_hierarchy = "date_created"
     list_filter = ["date_created", "last_updated", "status", "owner"]
     search_fields = ["target_url", "title", "description", "owner__username"]
-    readonly_fields = ["owner", "status", "date_created", "last_updated"]
+
+    def get_readonly_fields(self, request, obj: models.Submission = None):
+        readonly_fields = ["status", "date_created", "last_updated"]
+        if not request.user.is_staff:
+            readonly_fields += "owner"
+        return readonly_fields
 
     def get_custom_admin_actions(
         self,
@@ -215,9 +220,9 @@ class ModeratedSubmissionAdmin(SavesLastModifiedByMixin, CustomActionsModelAdmin
         add=False,
         change=False,
         form_url="",
-        obj=None,
+        obj: models.ModeratedSubmission = None,
     ):
-        if obj and obj.status == obj.Statuses.NEW:
+        if obj and obj.status == obj.Statuses.READY:
             return {"publish": "Publish as article"}
         return {}
 
@@ -300,6 +305,7 @@ class ArticleAdmin(admin.ModelAdmin):
         "submitter_preview",
         "submitter",
         "moderated_submission",
+        "_moderated_submission",
         "last_updated",
         "date_created",
     ]
@@ -312,6 +318,12 @@ class ArticleAdmin(admin.ModelAdmin):
     def submitter_preview(self, obj):
         url = f"https://onlydognews.com/gfx/site/{obj.submitter}-logo.png"
         return mark_safe(f'<a href="{url}"><img src="{url}" width="128px"/></a>')
+
+    def _moderated_submission(self, article: models.Article):
+        if article.moderated_submission:
+            url = link_to_moderated_submission(article.moderated_submission)
+            return mark_safe(f'<a href="{url}">{article.moderated_submission}</a>')
+        return None
 
     def _votes(self, article: models.Article):
         votes = []
