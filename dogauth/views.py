@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from collections import namedtuple
 
-from drf_yasg.inspectors import SwaggerAutoSchema as DrfYasgSwaggerAutoSchema
+from drf_spectacular.openapi import AutoSchema
 from rest_framework.permissions import OperandHolder, SingleOperandHolder
 
 PermissionItem = namedtuple("PermissionItem", ["name", "doc_str"])
@@ -12,16 +12,16 @@ def _render_permission_item(item):
     return f"+ `{item.name}`: *{item.doc_str}*"
 
 
-class SwaggerAutoSchema(DrfYasgSwaggerAutoSchema):
+class SwaggerAutoSchema(AutoSchema):
     """View inspector with some project-specific logic."""
 
-    def get_summary_and_description(self):
-        """Return summary and description extended with permission docs."""
-        summary, description = super().get_summary_and_description()
+    def get_description(self):
+        """override this for custom behaviour"""
+        description = super().get_description()
         permissions_description = self._get_permissions_description()
         if permissions_description:
             description += permissions_description
-        return summary, description
+        return description
 
     def _handle_permission(self, permission_class) -> Optional[PermissionItem]:
         permission = None
@@ -59,7 +59,7 @@ class SwaggerAutoSchema(DrfYasgSwaggerAutoSchema):
         permission_items = self._gather_permissions()
 
         if permission_items:
-            return "\n\n**Permissions:**\n" + "\n".join(
+            return "\n\n**Permission restrictions:**\n" + "\n".join(
                 _render_permission_item(item) for item in permission_items
             )
         else:

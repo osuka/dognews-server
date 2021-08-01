@@ -5,6 +5,41 @@
 
 ---
 
+## 2021-08-01 Migrating to drf-spectacular
+
+Up until now we have been using [drf-yasg](https://github.com/axnsan12/drf-yasg) and now we will be migrating to [drf-spectacular](https://github.com/tfranzel/drf-spectacular) as it's a more up to date project with similar targets.
+
+* drf-yasg can produce documentation and OpenAPI schemas but it only supports version 2.0.
+* drf-spectacular can do the same for OpenAPI 3.0
+
+Migration involved:
+
+* Remove yasg from requirements-common, pip uninstall it, add drf-spectacular
+* Remove drf-yasg-stubs from requirements-local, pip uninstall it
+* Replace drf_yasg with drf_spectacular in settings/APPLICATIONS.
+* In settings/REST_FRAMEWORK add     "DEFAULT_SCHEMA_CLASS": "dogauth.views.SwaggerAutoSchema"
+* In settings, remove SWAGGER_SETTINGS
+* In dogauth/views our SwaggerAutoSchema class extends now 'drf_spectacular.openapi.AutoSchema' and now we override `get_description` to add a list of the permission restrictions we have defined via [permission classes](./dogauth/permissions.py)
+* In dognews/urls.py we will now be following the drf-spectacular guide:
+
+```python
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+urlpatterns = [
+    # YOUR PATTERNS
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    # Optional UI:
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    # path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+]
+```
+
+Now we have:
+* http://localhost:8000/schema to retrieve the openapi.yml schema
+* http://localhost:8000/api/schema/swagger-ui/ to browse using the Swagger UI
+* We could have also redoc but I've disabled it since Swagger seems nicer and allows requests froms the UI in a very intuitive way.
+
+---
+
 ## 2020-10-7 Adding a manage.py custom command
 
 I've got a lot of articles in Jekyll that I would like to import here. The original articles are

@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",  # enable token authentication
     "custom_admin_actions",  # additional row of actions for ModelAdmins
     "news",
-    "drf_yasg",  # <-- live documentation
+    "drf_spectacular",  # <-- live documentation
     "django_extensions",  # <-- extends manage.py
     "dogauth",  # <-- custom user model
     "django.contrib.admin",  # <-- order is important for template overrides
@@ -147,11 +147,7 @@ REST_FRAMEWORK = {
     # enable pagination
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
     "PAGE_SIZE": 50,
-    # Require to continue to use deprecated CoreAPI. OpenAPI will replace CoreAPI but both API
-    # are not compatible with each other
-    # TODO: remove this when bug is fixed https://github.com/encode/django-rest-framework/issues/6868
-    # this is due to migration from using CoreAPI to OpenAPI for generation
-    "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "dogauth.views.SwaggerAutoSchema",
     # make default permissions to require auth
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.DjangoModelPermissions"],
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -162,11 +158,13 @@ REST_FRAMEWORK = {
     ],
 }
 
-# drf-yasg
-SWAGGER_SETTINGS = {
-    "DEFAULT_AUTO_SCHEMA_CLASS": "dogauth.views.SwaggerAutoSchema",
+# drf-spectacular
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Dognews Server API",
+    "DESCRIPTION": "Dognews Server client API",
+    "VERSION": "1.0.0",
+    # OTHER SETTINGS
 }
-
 # since django 3.2 this can be customized
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
