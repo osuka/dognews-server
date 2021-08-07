@@ -91,6 +91,7 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
         "target_url",
         "title",
         "description",
+        "date",
         "owner",
         "status",
         "date_created",
@@ -99,14 +100,16 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
     list_display = [
         "date_created",
         "last_updated",
+        "date",
         "owner",
         "title",
         "target_url",
         "status",
     ]
     date_hierarchy = "date_created"
-    list_filter = ["date_created", "last_updated", "status", "owner"]
+    list_filter = ["date_created", "last_updated", "date", "status", "owner"]
     search_fields = ["target_url", "title", "description", "owner__username"]
+    list_display_links = ["target_url", "title", "date_created"]
 
     def get_readonly_fields(self, request, obj: models.Submission = None):
         readonly_fields = ["status", "date_created", "last_updated"]

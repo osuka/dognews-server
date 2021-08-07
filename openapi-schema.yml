@@ -1429,6 +1429,14 @@ components:
           type: string
           format: uri
           readOnly: true
+        date:
+          type: string
+          format: date-time
+        fetched_date:
+          type: string
+          format: date-time
+        fetched_page:
+          type: string
         target_url:
           type: string
           format: uri
@@ -1447,13 +1455,6 @@ components:
           format: date-time
           readOnly: true
         last_updated:
-          type: string
-          format: date-time
-          readOnly: true
-        fetched_page:
-          type: string
-          readOnly: true
-        fetched_date:
           type: string
           format: date-time
           readOnly: true
@@ -1495,6 +1496,14 @@ components:
           type: string
           format: uri
           readOnly: true
+        date:
+          type: string
+          format: date-time
+        fetched_date:
+          type: string
+          format: date-time
+        fetched_page:
+          type: string
         target_url:
           type: string
           format: uri
@@ -1516,21 +1525,12 @@ components:
           type: string
           format: date-time
           readOnly: true
-        fetched_page:
-          type: string
-          readOnly: true
-        fetched_date:
-          type: string
-          format: date-time
-          readOnly: true
         owner:
           type: string
           format: uri
           readOnly: true
       required:
       - date_created
-      - fetched_date
-      - fetched_page
       - last_updated
       - owner
       - status

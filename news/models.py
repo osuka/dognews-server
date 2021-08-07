@@ -71,16 +71,16 @@ class Submission(models.Model):
     )
     title = models.CharField(max_length=120, blank=True, default="")
     description = models.CharField(max_length=250, blank=True, default="")
+    date = models.DateTimeField(null=True, editable=True)
     status = models.CharField(
         max_length=10, choices=Statuses.choices, default=Statuses.NEW, editable=False
     )
     date_created = models.DateTimeField(auto_now_add=True, editable=False)
     last_updated = models.DateTimeField(auto_now=True, editable=False)
 
-    fetched_page = models.TextField(
-        max_length=60 * 1024, default=None, blank=True, null=True, editable=False
-    )
-    fetched_date = models.DateTimeField(null=True, default=None, editable=False)
+    # https://jodyboucher.com/blog/django-howto-null-blank-field-options
+    fetched_page = models.TextField(max_length=60 * 1024, blank=True, editable=False)
+    fetched_date = models.DateTimeField(null=True, editable=False)
 
     @property
     def domain(self):

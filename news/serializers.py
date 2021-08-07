@@ -4,6 +4,7 @@ These transform models into various representations
 from collections import OrderedDict
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.db.models import fields
 from rest_framework import serializers
 from .models import Submission, ModeratedSubmission, Vote, Article
 
@@ -69,6 +70,12 @@ class SubmissionSerializer(
             "domain",
         ]
 
+    # we must force the fields that may not be present in responses to optional
+    # as the autoschema is not able to figure it out
+    date = serializers.DateTimeField(required=False)
+    fetched_date = serializers.DateTimeField(required=False)
+    fetched_page = serializers.CharField(required=False)
+
 
 # --------------------------------------
 
@@ -96,7 +103,7 @@ class ModeratedSubmissionSerializer(
         ]
 
 
-class VoteSerializer(serializers.HyperlinkedModelSerializer):
+class VoteSerializer(NonNullModelSerializer, serializers.HyperlinkedModelSerializer):
     """Votes are provided in Lists and don't link back to their
     submissions once serialized"""
 
