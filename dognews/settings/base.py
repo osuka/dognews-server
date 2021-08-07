@@ -174,7 +174,12 @@ ADMIN_REORDER = {
         {
             "app": "auth",
             "label": "Authentication and Authorisation",
-            "models": ("dogauth.User", "auth.Group", "auth.Permission"),
+            "models": (
+                "authtoken.TokenProxy",
+                "dogauth.User",
+                "auth.Group",
+                "auth.Permission",
+            ),
         },
         {
             "app": "news",
