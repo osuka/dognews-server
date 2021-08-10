@@ -4,7 +4,14 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
-from .models import Submission, ModeratedSubmission
+from .models import (
+    Fetch,
+    FetchStatuses,
+    ModerationStatuses,
+    Submission,
+    Moderation,
+    SubmissionStatuses,
+)
 
 sample_submission = {
     "target_url": "https://google.com",
@@ -13,13 +20,20 @@ sample_submission = {
 }
 
 
+def make_submission(target_url: str):
+    """Returns a new sample submission object with the given url"""
+    submission = sample_submission.copy()
+    submission["target_url"] = target_url
+    return submission
+
+
 class SubmissionModelTests(TestCase):
     """
     django model CRUD and logic tests, independent from the external API
     """
 
-    def test_create_item_and_move_to_moderation(self):
-        """We can promote a submission object to moderated submission"""
+    def test_changing_moderation_changes_status(self):
+        """Status of the parent submission is updated based on modifications made to related objects"""
         target = "https://google.com/1234"
         submission: Submission = Submission.objects.create(
             target_url=target,
@@ -28,34 +42,40 @@ class SubmissionModelTests(TestCase):
             owner=rw_for([Submission]),
         )
         submission.save()
-        self.assertEqual(
-            ModeratedSubmission.objects.filter(target_url=target).count(), 0
-        )
-        self.assertEqual(submission.status, Submission.Statuses.NEW)
-        submission.move_to_moderation()
-        self.assertEqual(
-            ModeratedSubmission.objects.filter(target_url=target).count(),
-            1,
-            "Item did not move to moderation",
-        )
-        moderated_submission: ModeratedSubmission = ModeratedSubmission.objects.get(
-            target_url=target
-        )
-        self.assertEqual(moderated_submission.status, ModeratedSubmission.Statuses.NEW)
-        self.assertEqual(moderated_submission.target_url, target)
-        self.assertEqual(submission.status, Submission.Statuses.ACCEPTED)
+        self.assertEqual(Moderation.objects.filter(target_url=target).count(), 0)
+        self.assertEqual(submission.status, SubmissionStatuses.PENDING)
+        mod = Moderation(submission=submission, status=ModerationStatuses.ACCEPTED)
+        mod.save()
+        self.assertEqual(submission.status, SubmissionStatuses.ACCEPTED)
+        mod.status = ModerationStatuses.REJECTED
+        mod.save()
+        self.assertEqual(submission.status, SubmissionStatuses.REJECTED_MOD)
 
-    def test_rejected_items_cant_be_moderated(self):
-        """We can't promote rejected submissions"""
+    def test_changing_fetched_accepted_doesnt_change_submission_status(self):
+        """When a bot changes the status to 'fetched' the status of the submission
+        doesn't change status if it was accepted
+        but if the bot set it to rejected then it does change the status"""
         target = "https://google.com/1234"
         submission: Submission = Submission.objects.create(
             target_url=target,
             description="this is a submission",
             title="url title",
             owner=rw_for([Submission]),
-            status=Submission.Statuses.REJECTED_BLACKLISTED_DOMAIN,
         )
-        self.assertRaises(ValidationError, submission.move_to_moderation)
+        submission.save()
+        self.assertEqual(submission.status, SubmissionStatuses.PENDING)
+
+        fetching = Fetch(submission=submission, status=FetchStatuses.FETCHED)
+        fetching.save()
+        self.assertEqual(submission.status, SubmissionStatuses.PENDING)
+
+        fetching.status = FetchStatuses.REJECTED_BANNED
+        fetching.save()
+        self.assertEqual(submission.status, SubmissionStatuses.REJECTED_BANNED)
+
+        fetching.status = FetchStatuses.REJECTED_ERROR
+        fetching.save()
+        self.assertEqual(submission.status, SubmissionStatuses.REJECTED_FETCH)
 
 
 # ------------------------------------------------------
@@ -67,8 +87,11 @@ class SubmissionAPITests(APITestCase):
     """
 
     def setUp(self):
-        self.rw_user = rw_for([Submission])
-        self.ro_user = ro_for([Submission])
+        self.rw_user = rw_for([Submission], "user1")
+        self.rw_user2 = rw_for([Submission], "user2")
+        self.ro_user = ro_for([Submission], "user_ro")
+        self.rw_mod = rw_for([Submission, Moderation], "mod1")
+        self.rw_mod2 = rw_for([Submission, Moderation], "mod2")
 
     def as_user(self, user):
         """Peform remaining operations as a user that has the permission required"""
@@ -105,29 +128,71 @@ class SubmissionAPITests(APITestCase):
 
     def test_can_list_empty_items(self):
         """Can list items if the user has 'view' permission when there are no items
-        GET /newsItem
+        GET /submission
         """
         self.as_user(self.ro_user)
         response = self.client.get("/submissions")
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertEqual(response.data["count"], 0)
 
-    def test_can_list_one_item(self):
-        """Can list items if the user has 'view' permission when there's one item
-        POST /newsItem
-        GET /newsItem
+    def test_can_list_only_theirs_item(self):
+        """One user can list their items but a different user that isn't
+        a moderator can't list them env if the user has 'view' permission when there's one item
+        POST /submissions
+        GET /submissions
         """
-        self.as_user(self.rw_user)
-        response = self.client.post("/submissions", sample_submission)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        # user 1 has 3 submissions
+        sub1 = [
+            make_submission("http://localhost/number1_1"),
+            make_submission("http://localhost/number1_2"),
+            make_submission("http://localhost/number1_3"),
+        ]
 
-        self.as_user(self.ro_user)
+        # user 2 has 2 submission
+        sub2 = [
+            make_submission("http://localhost/number2_1"),
+            make_submission("http://localhost/number2_2"),
+        ]
+
+        self.as_user(self.rw_user)
+        for sub in sub1:
+            response = self.client.post("/submissions", sub)
+            self.assertEqual(
+                response.status_code, status.HTTP_201_CREATED, response.data
+            )
+
+        self.as_user(self.rw_user2)
+        for sub in sub2:
+            response = self.client.post("/submissions", sub)
+            self.assertEqual(
+                response.status_code, status.HTTP_201_CREATED, response.data
+            )
+
+        self.as_user(self.rw_user)  # first user: sees their 3
         response = self.client.get("/submissions")
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["count"], 3)
         self.assertEqual(
-            response.data["results"][0]["target_url"], "https://google.com"
+            response.data["results"][0]["target_url"], sub1[0]["target_url"]
         )
+
+        self.as_user(self.rw_user2)  # second user: seeis their 2
+        response = self.client.get("/submissions")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(
+            response.data["results"][1]["target_url"], sub2[1]["target_url"]
+        )
+
+        self.as_user(self.ro_user)  # different user altogether, sees nothing
+        response = self.client.get("/submissions")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data["count"], 0)
+
+        self.as_user(self.rw_mod)  # mod: sees all
+        response = self.client.get("/submissions")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data["count"], 5)
 
     def test_can_paginate_items(self):
         """Can list items and navigate throught them via pagination
@@ -139,13 +204,13 @@ class SubmissionAPITests(APITestCase):
         page_size = 50  # from settings.py, rest framework settings
         self.as_user(self.rw_user)
         for i in range(0, int(page_size * 2.5)):
-            item = sample_submission.copy()
-            item["target_url"] = f"https://google.com/?{i}"
-            response = self.client.post("/submissions", item)
+            response = self.client.post(
+                "/submissions", make_submission(f"https://localhost/?{i}")
+            )
 
         # first page
-        self.as_user(self.ro_user)
-        response = self.client.get("/submissions", follow=True)
+        self.as_user(self.rw_user)  # same user
+        response = self.client.get("/submissions?ordering=-date_created", follow=True)
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertEqual(response.data["count"], page_size * 2.5)
         self.assertIn(f"limit={page_size}", response.data["next"])
@@ -154,7 +219,7 @@ class SubmissionAPITests(APITestCase):
         first = int(page_size * 2.5) - 1
         self.assertEqual(
             response.data["results"][0]["target_url"],
-            f"https://google.com/?{first}",
+            f"https://localhost/?{first}",
         )
 
         # second page
@@ -167,7 +232,7 @@ class SubmissionAPITests(APITestCase):
         first = first - page_size  # is in reverse order
         self.assertEqual(
             response.data["results"][0]["target_url"],
-            f"https://google.com/?{first}",
+            f"https://localhost/?{first}",
         )
 
         # third and last page
@@ -179,7 +244,7 @@ class SubmissionAPITests(APITestCase):
         first = first - page_size
         self.assertEqual(
             response.data["results"][0]["target_url"],
-            f"https://google.com/?{first}",
+            f"https://localhost/?{first}",
         )
 
     def test_can_modify_item(self):

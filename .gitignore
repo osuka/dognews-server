@@ -1,5 +1,6 @@
 .venv/
 __pycache__/
+examples.local.http
 config.local.sh
 .ropeproject
 dognews/settings/dreamhost.py

@@ -13,6 +13,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, re_path
 from django.urls import include
@@ -30,13 +32,13 @@ from rest_framework_simplejwt.views import (
 )
 
 # from django.contrib.auth.models import Group, Permission
-from news.views import (
+from news.rest.views import (
     SubmissionViewSet,
+    ModerationViewSet,
+    FetchViewSet,
+    SubmissionVoteViewSet,
     UserViewSet,
-    ModeratedSubmissionViewSet,
     VoteViewSet,
-    ModeratedSubmissionVoteViewSet,
-    ArticleViewSet,
 )
 
 urlpatterns = []
@@ -48,17 +50,29 @@ urlpatterns = []
 # Here we define newsItem and /newsItem/ID/ratings
 router = SimpleRouter(trailing_slash=False)
 router.register(r"submissions", SubmissionViewSet)
-router.register(r"moderatedsubmissions", ModeratedSubmissionViewSet)
+router.register(r"moderations", ModerationViewSet)
+router.register(r"fetchs", FetchViewSet)
+# router.register(r"moderatedsubmissions", ModeratedSubmissionViewSet)
 router.register(r"votes", VoteViewSet)
+
+# .list(), .retrieve(), .create(), .update(), .partial_update(), and .destroy().
 urlpatterns += [
     re_path(
-        r"^moderatedsubmissions/(?P<moderated_submission_pk>\d+)/votes$",
-        ModeratedSubmissionVoteViewSet.as_view({"get": "list", "post": "create"}),
-        # delete to the list deletes current user's vote
-        # post to the list adds/updates current user's vote
+        r"^submissions/(?P<submission_pk>\d+)/moderation$",
+        ModerationViewSet.as_view(
+            {"get": "retrieve", "put": "update", "delete": "destroy"}
+        ),
+    ),
+    re_path(
+        r"^submissions/(?P<submission_pk>\d+)/fetch$",
+        FetchViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
+    ),
+    re_path(
+        r"^submissions/(?P<submission_pk>\d+)/votes$",
+        SubmissionVoteViewSet.as_view({"get": "list", "post": "create"}),
     ),
 ]
-router.register(r"articles", ArticleViewSet)
+# router.register(r"articles", ArticleViewSet)
 
 router.register(r"users", UserViewSet)
 # router.register(r'groups', GroupViewSet)
@@ -66,6 +80,10 @@ router.register(r"users", UserViewSet)
 urlpatterns += [
     path("admin/", admin.site.urls),
 ]
+
+# serve media, but only in local
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.

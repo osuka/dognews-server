@@ -2,6 +2,9 @@
 Models to handle new submissions and their lifecycle to becoming Articles
 """
 
+import os
+from datetime import datetime
+from hashlib import sha1
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -45,6 +48,45 @@ def create_auth_token(
         Token.objects.create(user=instance)
 
 
+class SubmissionStatuses(models.TextChoices):
+    """Calculated lifecyle status of Submission entities"""
+
+    PENDING = "pending", "Pending"
+    ACCEPTED = "accepted", "A moderator accepted"
+    REJECTED_MOD = "rej_mod", "Rejected: A moderator rejected it"
+    REJECTED_FETCH = "rej_fetch", "Rejected: Could not be fetched"
+    REJECTED_BANNED = "rej_banned", "Rejected: Domain is blocklisted"
+    REJECTED_SENTIMENT = "rej_sentim", "Rejected: Sentiment analysis"
+
+
+class ModerationStatuses(models.TextChoices):
+    """Lifecycle status"""
+
+    PENDING = "pending", "Pending"
+    ACCEPTED = "accepted", "Moderation passed"
+    REJECTED = "rejected", "Moderator rejected"
+
+
+class FetchStatuses(models.TextChoices):
+    """Lifecycle status"""
+
+    PENDING = "pending", "Pending"
+    FETCHED = "fetched", "Fetched"
+    REJECTED_ERROR = "rej_error", "Rejected: Could not fetch"
+    REJECTED_BANNED = "rej_fetch", "Rejected: domain in blocklist"
+
+
+class AnalysisStatuses(models.TextChoices):
+    """Lifecycle status"""
+
+    PENDING = "pending", "Pending"
+    FAILED = "failed", "Failed"
+    PASSED = "passed", "Passed"
+
+
+# ----
+
+
 class Submission(models.Model):
     """
     Represents a submitted news item. This is produced by an authorized user
@@ -52,15 +94,13 @@ class Submission(models.Model):
     from the url and then are discarded or moved to the moderation queue
     """
 
-    class Statuses(models.TextChoices):
-        """Lifecycle status"""
-
-        NEW = "new", "Processing"
-        ACCEPTED = "accepted", "Moved to moderation"
-        REJECTED_COULD_NOT_FETCH = "rej_fetch", "Rejected: Could not fetch"
-        REJECTED_BLACKLISTED_DOMAIN = "rej_list", "Rejected: Blacklisted domain"
-        REJECTED_MODERATOR = "rej_mod", "Rejected: Moderator action"
-
+    # status is changed via signal triggering
+    status = models.CharField(
+        max_length=10,
+        choices=SubmissionStatuses.choices,
+        default=SubmissionStatuses.PENDING,
+        editable=False,
+    )
     target_url = models.URLField(unique=True)
     owner = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
@@ -69,18 +109,14 @@ class Submission(models.Model):
         editable=True,  # only via admin
         related_name="submissions",
     )
+    last_modified_by = models.ForeignKey(
+        to=User, on_delete=models.SET_NULL, null=True, editable=False
+    )
     title = models.CharField(max_length=120, blank=True, default="")
     description = models.CharField(max_length=250, blank=True, default="")
     date = models.DateTimeField(null=True, editable=True)
-    status = models.CharField(
-        max_length=10, choices=Statuses.choices, default=Statuses.NEW, editable=False
-    )
     date_created = models.DateTimeField(auto_now_add=True, editable=False)
     last_updated = models.DateTimeField(auto_now=True, editable=False)
-
-    # https://jodyboucher.com/blog/django-howto-null-blank-field-options
-    fetched_page = models.TextField(max_length=60 * 1024, blank=True, editable=False)
-    fetched_date = models.DateTimeField(null=True, editable=False)
 
     @property
     def domain(self):
@@ -93,137 +129,112 @@ class Submission(models.Model):
             except ValueError:
                 pass
 
-    def move_to_moderation(self):
-        """Create a ModeratedSubmission associated to this submission, and return it"""
-        if self.status != self.Statuses.NEW and self.status != self.Statuses.ACCEPTED:
-            raise ValidationError("Only non rejected submissions can be accepted")
-        if self.status == self.Statuses.ACCEPTED:
-            return ModeratedSubmission.objects.get(
-                target_url=self.target_url
-            )  # already done
-        self.status = self.Statuses.ACCEPTED
-        moderated_submission = ModeratedSubmission.objects.create(
-            submission=self,
-        )
-        moderated_submission.save()
-        self.save()
-        return moderated_submission
-
     def __str__(self):
-        return f"{self.id} ({self.domain[:20]}...)"
+        return f"{self.domain}({self.owner}:{self.id})"
 
 
-class ModeratedSubmission(models.Model):
+def user_directory_path(instance, filename):
+    """Defines where to save a file, using a hash of the filename"""
+    # note that this path is relative to settings.MEDIA_ROOT
+    key = sha1(filename.encode()).hexdigest()
+    _, extension = os.path.splitext(filename)
+    now = datetime.utcnow().strftime("%Y/%H/%M")
+    username = (
+        instance.submission.owner.id
+        if instance.submission and instance.submission.owner
+        else ""
+    )
+    return f"uploaded_images/{now}/{username}_{key}{extension}"
+
+
+class Fetch(models.Model):
     """
-    Stores posted items that have been retrieved while bots and humans process them.
-    First bots iterate over them updating fields and finally setting it to Ready for review,
-    then users (collaborators) can view them, vote for them and moderators can
-    publish them
+    Stores data obtained after fetching the URL and parsing it
     """
-
-    class Statuses(models.TextChoices):
-        """Lifecycle status"""
-
-        NEW = "new", "Processing"
-        READY = "ready", "Ready for review"
-        ACCEPTED = "accepted", "Published"
-        REJECTED_COULD_NOT_FETCH = "rej_spam", "Rejected: It's spam"
-        REJECTED_BLACKLISTED_DOMAIN = "rej_dupe", "Rejected: Duplicate"
-        REJECTED_DOWNVOTED = "rej_votes", "Rejected: Users downvoted"
-        REJECTED_OTHER = "rejected", "Rejected: Other"
 
     submission = models.OneToOneField(
-        to=Submission, on_delete=models.SET_NULL, null=True
-    )
-    target_url = models.URLField(unique=True, blank=True, null=True, default=None)
-    title = models.CharField(max_length=120, blank=True, null=True, default=None)
-    description = models.CharField(max_length=250, blank=True, null=True, default=None)
-    thumbnail = models.CharField(
-        max_length=250, null=True, blank=True, default=None, editable=False
+        Submission, on_delete=models.CASCADE, primary_key=True
     )
     status = models.CharField(
-        max_length=10, choices=Statuses.choices, default=Statuses.NEW
+        max_length=10,
+        choices=FetchStatuses.choices,
+        default=FetchStatuses.PENDING,
+        editable=True,
     )
-    last_modified_by = models.ForeignKey(
-        to=User,
-        on_delete=models.SET_NULL,
-        null=True,
-        editable=False,
-        related_name="moderated_submissions",
+    owner = models.ForeignKey(
+        to=User, on_delete=models.SET_NULL, null=True, editable=False
     )
     last_updated = models.DateTimeField(auto_now=True, editable=False)
     date_created = models.DateTimeField(auto_now_add=True, editable=False)
 
-    bot_title = models.CharField(
-        max_length=120, null=True, blank=True, default=None, editable=False
+    title = models.CharField(
+        max_length=120, null=True, blank=True, default=None, editable=True
     )
-    bot_description = models.CharField(
-        max_length=250, null=True, blank=True, default=None, editable=False
+    description = models.CharField(
+        max_length=250, null=True, blank=True, default=None, editable=True
     )
-    bot_summary = models.TextField(null=True, blank=True, default=None, editable=False)
-    bot_sentiment = models.TextField(
-        null=True, blank=True, default=None, editable=False
+    thumbnail = models.CharField(
+        max_length=250, null=True, blank=True, default=None, editable=True
     )
-    bot_thumbnail = models.CharField(
-        max_length=250, null=True, blank=True, default=None, editable=False
+    thumbnail_image = models.ImageField(upload_to=user_directory_path, null=True)
+
+    fetched_page = models.TextField(max_length=60 * 1024, blank=True, editable=True)
+
+
+class Analysis(models.Model):
+    """
+    Stores data obtained after analysing the contents by a bot
+    """
+
+    submission = models.OneToOneField(
+        Submission, on_delete=models.CASCADE, primary_key=True
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=AnalysisStatuses.choices,
+        default=AnalysisStatuses.PENDING,
+        editable=True,
+    )
+    owner = models.ForeignKey(
+        to=User, on_delete=models.SET_NULL, null=True, editable=False
+    )
+    last_updated = models.DateTimeField(auto_now=True, editable=False)
+    date_created = models.DateTimeField(auto_now_add=True, editable=False)
+
+    summary = models.TextField(null=True, blank=True, default=None, editable=True)
+    sentiment = models.TextField(null=True, blank=True, default=None, editable=True)
+
+
+class Moderation(models.Model):
+    """
+    Stores posted details added by a moderator
+    """
+
+    submission = models.OneToOneField(
+        Submission, on_delete=models.CASCADE, primary_key=True
     )
 
-    def save(
-        self, force_insert=False, force_update=False, using=None, update_fields=None
-    ):
-        # auto populate from the chose submission
-        if self.submission and (
-            not self.description or not self.title or not self.target_url
-        ):
-            self.description = (
-                self.submission.description
-                if not self.description
-                else self.description
-            )
-            self.title = self.submission.title if not self.title else self.title
-            self.target_url = (
-                self.submission.target_url if not self.target_url else self.target_url
-            )
-        super().save(force_insert, force_update, using, update_fields)
+    status = models.CharField(
+        max_length=10,
+        choices=ModerationStatuses.choices,
+        default=ModerationStatuses.PENDING,
+        editable=True,
+    )
+    target_url = models.URLField(unique=True, blank=True, null=True, default=None)
+    title = models.CharField(max_length=120, blank=True, null=True, default=None)
+    description = models.CharField(max_length=250, blank=True, null=True, default=None)
+    owner = models.ForeignKey(
+        to=User,
+        on_delete=models.SET_NULL,
+        null=True,
+        editable=False,
+        related_name="moderations",
+    )
+    last_updated = models.DateTimeField(auto_now=True, editable=False)
+    date_created = models.DateTimeField(auto_now_add=True, editable=False)
 
-    def move_to_article(self, approver: User = None):
-        """Create an Article associated with this instance, and return it.
-        If called twice, it will return the already created object"""
-        target_url = self.target_url if self.target_url else self.submission.target_url
-        if self.status != self.Statuses.READY and self.status != self.Statuses.ACCEPTED:
-            raise ValidationError("Only READY submissions can be moved")
-        if self.status == self.Statuses.ACCEPTED:
-            return Article.objects.get(target_url=target_url)  # already exists
-        self.status = self.Statuses.ACCEPTED
-        description = (
-            self.description if self.description else self.submission.description
-        )
-        title = self.title if self.title else self.submission.title
-        article = Article.objects.create(
-            moderated_submission=self,
-            target_url=target_url,
-            title=title,
-            description=description,
-            thumbnail=self.thumbnail,
-            submitter=self.submission.owner,
-            approver=approver,
-        )
-        # article.save()
-        self.save()
-        return article
-
-    def vote(self, user, vote_value):
-        """Register a vote by a user - if it has already voted, the new vote
-        replaces the vote value of the previous one"""
-        vote, _ = self.votes.get_or_create(owner=user)
-        if vote.value != vote_value:
-            vote.value = vote_value
-            vote.save()
-        return vote
-
-    # + ratings: is a one-to-many relation, see Rating
-    def __str__(self):
-        return f"{self.id} ({self.target_url[:20]})"
+    def __str__(self) -> str:
+        return f"moderation by {self.owner} on {self.last_updated}"
 
 
 class Vote(models.Model):
@@ -236,18 +247,19 @@ class Vote(models.Model):
         DOWN = -1, "👎"
         FLAG = -100, "💩"
 
-    moderated_submission = models.ForeignKey(
-        to=ModeratedSubmission,
-        on_delete=models.SET_NULL,
-        null=True,
+    submission = models.ForeignKey(
+        to=Submission,
+        on_delete=models.CASCADE,
+        null=False,
         editable=False,
         related_name="votes",
+        blank=False,
     )
     owner = models.ForeignKey(
-        to=User,
+        to=settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        editable=False,
+        editable=True,  # only via admin
         related_name="votes",
     )
     value = models.SmallIntegerField(choices=Values.choices, default=Values.UP)
@@ -256,53 +268,77 @@ class Vote(models.Model):
     date_created = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self):
-        return f"{self.id} ({self.owner},{self.moderated_submission},{self.value})"
+        return f"{self.id} ({self.owner},{self.submission},{self.value})"
 
     class Meta:
-        unique_together = [("owner", "moderated_submission")]
+        unique_together = [("owner", "submission")]
 
 
-class Article(models.Model):
-    """
-    Articles that have been accepted for publication. This is a small table with only the final
-    version of articles after review and moderation.
-    """
+# ---- Signal handlers that affect submission status
 
-    class Statuses(models.TextChoices):
-        """Lifecycle status"""
 
-        VISIBLE = "visible", "Visible"
-        HIDDEN = "hidden", "Hidden (moderation action)"
+def set_status(submission: Submission, new_status: SubmissionStatuses):
+    """Updates the status of a submission to the given one if it's needed and saves the model"""
+    if submission.status != new_status:
+        submission.status = new_status
+        submission.save()
 
-    status = models.CharField(
-        max_length=10, choices=Statuses.choices, default=Statuses.VISIBLE, editable=True
-    )
-    target_url = models.URLField(unique=True)
-    title = models.CharField(max_length=120)
-    description = models.CharField(max_length=512)
-    thumbnail = models.CharField(
-        max_length=250, null=True, blank=True, default=None, editable=False
-    )
-    submitter = models.ForeignKey(
-        to=User,
-        on_delete=models.SET_NULL,
-        null=True,
-        editable=False,
-        related_name="articles",
-    )
-    moderated_submission = models.OneToOneField(
-        to=ModeratedSubmission, on_delete=models.SET_NULL, null=True, editable=False
-    )
-    approver = models.ForeignKey(
-        to=User,
-        on_delete=models.SET_NULL,
-        null=True,
-        editable=False,
-        related_name="approved_articles",
-    )
 
-    last_updated = models.DateTimeField(auto_now=True, editable=False)
-    date_created = models.DateTimeField(auto_now_add=True, editable=False)
+def calculate_status(submission: Submission):
+    """Calculates the status of a submission based on all the related models that affect it.
+    This will be called every time there is a relevant change (using signals)"""
+    if hasattr(submission, "moderation"):
+        moderation: Moderation = submission.moderation
+        if moderation.status == ModerationStatuses.ACCEPTED:
+            set_status(submission, SubmissionStatuses.ACCEPTED)
+        elif moderation.status == ModerationStatuses.REJECTED:
+            set_status(submission, SubmissionStatuses.REJECTED_MOD)
+        else:
+            set_status(submission, SubmissionStatuses.PENDING)
+    elif hasattr(submission, "fetch"):
+        fetchobj: Fetch = submission.fetch
+        # only rejections change the main status
+        if fetchobj.status == FetchStatuses.REJECTED_BANNED:
+            set_status(submission, SubmissionStatuses.REJECTED_BANNED)
+        elif fetchobj.status == FetchStatuses.REJECTED_ERROR:
+            set_status(submission, SubmissionStatuses.REJECTED_FETCH)
+    elif hasattr(submission, "analysis"):
+        analysis: Analysis = submission.analysis
+        # only rejections change the main status
+        if analysis.status == AnalysisStatuses.FAILED:
+            set_status(submission, SubmissionStatuses.REJECTED_SENTIMENT)
+    else:
+        set_status(submission, SubmissionStatuses.PENDING)
 
-    def __str__(self):
-        return f"{self.id} ({self.target_url[:20]},{self.date_created})"
+
+@receiver(post_save, sender=Moderation)
+def moderation_changed(
+    sender: Moderation,
+    instance=None,
+    created=False,
+    **kwargs,  # pylint: disable=unused-argument
+):
+    """When moderation changes we may need to update the associated submission status"""
+    calculate_status(instance.submission)
+
+
+@receiver(post_save, sender=Fetch)
+def fetch_changed(
+    sender: Fetch,
+    instance=None,
+    created=False,
+    **kwargs,  # pylint: disable=unused-argument
+):
+    """When moderation changes we may need to update the associated submission status"""
+    calculate_status(instance.submission)
+
+
+@receiver(post_save, sender=Analysis)
+def analysis_changed(
+    sender: Analysis,
+    instance=None,
+    created=False,
+    **kwargs,  # pylint: disable=unused-argument
+):
+    """When moderation changes we may need to update the associated submission status"""
+    calculate_status(instance.submission)

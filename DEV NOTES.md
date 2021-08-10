@@ -5,6 +5,51 @@
 
 ---
 
+## 2021-08-08 Restrict what users can see at view level
+
+Using filtering we can make sure a user can't see objects they shouldn't:
+
+```python
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return Submission.objects.all()
+        return Submission.objects.filter(owner=user)
+```
+
+---
+
+## 2021-08-08 Allow filtering on the REST interfaces
+
+See the [reference](https://www.django-rest-framework.org/api-guide/filtering/).
+
+* Add `django-filter` to requirements
+* Add `filter_backends = [django_filters.rest_framework.DjangoFilterBackend]` to the Views we want to enable it for
+* add `'django_filters',` to INSTALLED_APPS
+
+We can now add to a rest framework view:
+
+```python
+class UserListView(generics.ListAPIView):
+    ...
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    filterset_fields = ['status']
+```
+
+> Note this can be done for all of them by adding `"DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],` to `REST_FRAMEWORK` in settings
+
+
+We will also use another filter backend, included with rest-framework to allow a parameter like `?ordering=date_created`
+
+```python
+class UserListView(generics.ListAPIView):
+    ...
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['date_created']
+```
+
+---
+
 ## 2021-08-01 Migrating to drf-spectacular
 
 Up until now we have been using [drf-yasg](https://github.com/axnsan12/drf-yasg) and now we will be migrating to [drf-spectacular](https://github.com/tfranzel/drf-spectacular) as it's a more up to date project with similar targets.
@@ -157,7 +202,7 @@ Some notes on ipython:
 ### Create a graph of the models
 
 ```bash
-apt install -y graphviz
+sudo apt install -y graphviz
 pip install pydotplus
 ./manage.py graph_models -a -g -o models.png
 ```

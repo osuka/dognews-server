@@ -233,66 +233,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenVerify'
           description: ''
-  /articles:
-    get:
-      operationId: articles_list
-      description: |-
-        Final accepted articles, read only view.
-        *Public*
-      parameters:
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
-      tags:
-      - articles
-      security:
-      - basicAuth: []
-      - cookieAuth: []
-      - tokenAuth: []
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedArticleList'
-          description: ''
-  /articles/{id}:
-    get:
-      operationId: articles_retrieve
-      description: |-
-        Final accepted articles, read only view.
-        *Public*
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this article.
-        required: true
-      tags:
-      - articles
-      security:
-      - basicAuth: []
-      - cookieAuth: []
-      - tokenAuth: []
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Article'
-          description: ''
   /auth/login:
     post:
       operationId: auth_login_create
@@ -323,15 +263,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthToken'
           description: ''
-  /moderatedsubmissions:
+  /fetchs:
     get:
-      operationId: moderatedsubmissions_list
+      operationId: fetchs_list
       description: |-
-        Accepted articles in moderation
+        SFetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
-        + `IsModeratorOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND the user is NOT in a group called 'Moderators' group     Everything else is allowed*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - name: limit
@@ -346,8 +286,23 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - fetched
+          - pending
+          - rej_error
+          - rej_fetch
       tags:
-      - moderatedsubmissions
+      - fetchs
       security:
       - basicAuth: []
       - cookieAuth: []
@@ -358,30 +313,30 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedModeratedSubmissionList'
+                $ref: '#/components/schemas/PaginatedFetchList'
           description: ''
     post:
-      operationId: moderatedsubmissions_create
+      operationId: fetchs_create
       description: |-
-        Accepted articles in moderation
+        SFetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
-        + `IsModeratorOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND the user is NOT in a group called 'Moderators' group     Everything else is allowed*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       tags:
-      - moderatedsubmissions
+      - fetchs
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModeratedSubmission'
+              $ref: '#/components/schemas/Fetch'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ModeratedSubmission'
+              $ref: '#/components/schemas/Fetch'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ModeratedSubmission'
+              $ref: '#/components/schemas/Fetch'
       security:
       - basicAuth: []
       - cookieAuth: []
@@ -392,41 +347,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModeratedSubmission'
+                $ref: '#/components/schemas/Fetch'
           description: ''
-  /moderatedsubmissions/{moderated_submission_id}/votes:
+  /fetchs/{submission}:
     get:
-      operationId: moderatedsubmissions_votes_list
+      operationId: fetchs_retrieve
       description: |-
-        Votes for a moderated submission - this is tied to its primary key
-        that must be passed as `moderatedsubmission_pk` kwarg
-        * multiple posts to the collection from same users will not create
-        multiple instances, instead subsequent posts will update their vote
+        SFetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
-        + `IsOwnerOrModeratorOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     * AND if the user is not in the Moderators group     Everything else is allowed*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
-      - name: limit
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
       - in: path
-        name: moderated_submission_id
+        name: submission
         schema:
           type: integer
+        description: A unique value identifying this fetch.
         required: true
-      - name: offset
-        required: false
-        in: query
-        description: The initial index from which to return the results.
-        schema:
-          type: integer
       tags:
-      - moderatedsubmissions
+      - fetchs
       security:
       - basicAuth: []
       - cookieAuth: []
@@ -437,111 +378,37 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedVoteList'
-          description: ''
-    post:
-      operationId: moderatedsubmissions_votes_create
-      description: |-
-        Votes for a moderated submission - this is tied to its primary key
-        that must be passed as `moderatedsubmission_pk` kwarg
-        * multiple posts to the collection from same users will not create
-        multiple instances, instead subsequent posts will update their vote
-
-        **Permission restrictions:**
-        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
-        + `IsOwnerOrModeratorOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     * AND if the user is not in the Moderators group     Everything else is allowed*
-        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
-      parameters:
-      - in: path
-        name: moderated_submission_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - moderatedsubmissions
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Vote'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Vote'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Vote'
-      security:
-      - basicAuth: []
-      - cookieAuth: []
-      - tokenAuth: []
-      - jwtAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Vote'
-          description: ''
-  /moderatedsubmissions/{id}:
-    get:
-      operationId: moderatedsubmissions_retrieve
-      description: |-
-        Accepted articles in moderation
-
-        **Permission restrictions:**
-        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
-        + `IsModeratorOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND the user is NOT in a group called 'Moderators' group     Everything else is allowed*
-        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this moderated submission.
-        required: true
-      tags:
-      - moderatedsubmissions
-      security:
-      - basicAuth: []
-      - cookieAuth: []
-      - tokenAuth: []
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ModeratedSubmission'
+                $ref: '#/components/schemas/Fetch'
           description: ''
     put:
-      operationId: moderatedsubmissions_update
+      operationId: fetchs_update
       description: |-
-        Accepted articles in moderation
+        SFetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
-        + `IsModeratorOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND the user is NOT in a group called 'Moderators' group     Everything else is allowed*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - in: path
-        name: id
+        name: submission
         schema:
           type: integer
-        description: A unique integer value identifying this moderated submission.
+        description: A unique value identifying this fetch.
         required: true
       tags:
-      - moderatedsubmissions
+      - fetchs
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ModeratedSubmission'
+              $ref: '#/components/schemas/Fetch'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ModeratedSubmission'
+              $ref: '#/components/schemas/Fetch'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ModeratedSubmission'
+              $ref: '#/components/schemas/Fetch'
       security:
       - basicAuth: []
       - cookieAuth: []
@@ -552,37 +419,37 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModeratedSubmission'
+                $ref: '#/components/schemas/Fetch'
           description: ''
     patch:
-      operationId: moderatedsubmissions_partial_update
+      operationId: fetchs_partial_update
       description: |-
-        Accepted articles in moderation
+        SFetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
-        + `IsModeratorOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND the user is NOT in a group called 'Moderators' group     Everything else is allowed*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - in: path
-        name: id
+        name: submission
         schema:
           type: integer
-        description: A unique integer value identifying this moderated submission.
+        description: A unique value identifying this fetch.
         required: true
       tags:
-      - moderatedsubmissions
+      - fetchs
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedModeratedSubmission'
+              $ref: '#/components/schemas/PatchedFetch'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedModeratedSubmission'
+              $ref: '#/components/schemas/PatchedFetch'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedModeratedSubmission'
+              $ref: '#/components/schemas/PatchedFetch'
       security:
       - basicAuth: []
       - cookieAuth: []
@@ -593,26 +460,250 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModeratedSubmission'
+                $ref: '#/components/schemas/Fetch'
           description: ''
     delete:
-      operationId: moderatedsubmissions_destroy
+      operationId: fetchs_destroy
       description: |-
-        Accepted articles in moderation
+        SFetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
-        + `IsModeratorOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND the user is NOT in a group called 'Moderators' group     Everything else is allowed*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - in: path
-        name: id
+        name: submission
         schema:
           type: integer
-        description: A unique integer value identifying this moderated submission.
+        description: A unique value identifying this fetch.
         required: true
       tags:
-      - moderatedsubmissions
+      - fetchs
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /moderations:
+    get:
+      operationId: moderations_list
+      description: |-
+        Moderation attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - accepted
+          - pending
+          - rejected
+      tags:
+      - moderations
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedModerationList'
+          description: ''
+    post:
+      operationId: moderations_create
+      description: |-
+        Moderation attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      tags:
+      - moderations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Moderation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Moderation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Moderation'
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Moderation'
+          description: ''
+  /moderations/{submission}:
+    get:
+      operationId: moderations_retrieve
+      description: |-
+        Moderation attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission
+        schema:
+          type: integer
+        description: A unique value identifying this moderation.
+        required: true
+      tags:
+      - moderations
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Moderation'
+          description: ''
+    put:
+      operationId: moderations_update
+      description: |-
+        Moderation attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission
+        schema:
+          type: integer
+        description: A unique value identifying this moderation.
+        required: true
+      tags:
+      - moderations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Moderation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Moderation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Moderation'
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Moderation'
+          description: ''
+    patch:
+      operationId: moderations_partial_update
+      description: |-
+        Moderation attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission
+        schema:
+          type: integer
+        description: A unique value identifying this moderation.
+        required: true
+      tags:
+      - moderations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedModeration'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedModeration'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedModeration'
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Moderation'
+          description: ''
+    delete:
+      operationId: moderations_destroy
+      description: |-
+        Moderation attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission
+        schema:
+          type: integer
+        description: A unique value identifying this moderation.
+        required: true
+      tags:
+      - moderations
       security:
       - basicAuth: []
       - cookieAuth: []
@@ -644,6 +735,23 @@ paths:
         description: The initial index from which to return the results.
         schema:
           type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - accepted
+          - pending
+          - rej_banned
+          - rej_fetch
+          - rej_mod
+          - rej_sentim
       tags:
       - submissions
       security:
@@ -833,6 +941,284 @@ paths:
       responses:
         '204':
           description: No response body
+  /submissions/{submission_id}/fetch:
+    get:
+      operationId: submissions_fetch_retrieve
+      description: |-
+        SFetching results attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission_id
+        schema:
+          type: integer
+        description: A unique value identifying this fetch.
+        required: true
+      tags:
+      - submissions
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Fetch'
+          description: ''
+    put:
+      operationId: submissions_fetch_update
+      description: |-
+        SFetching results attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission_id
+        schema:
+          type: integer
+        description: A unique value identifying this fetch.
+        required: true
+      tags:
+      - submissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Fetch'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Fetch'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Fetch'
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Fetch'
+          description: ''
+    delete:
+      operationId: submissions_fetch_destroy
+      description: |-
+        SFetching results attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission_id
+        schema:
+          type: integer
+        description: A unique value identifying this fetch.
+        required: true
+      tags:
+      - submissions
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /submissions/{submission_id}/moderation:
+    get:
+      operationId: submissions_moderation_retrieve
+      description: |-
+        Moderation attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission_id
+        schema:
+          type: integer
+        description: A unique value identifying this moderation.
+        required: true
+      tags:
+      - submissions
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Moderation'
+          description: ''
+    put:
+      operationId: submissions_moderation_update
+      description: |-
+        Moderation attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission_id
+        schema:
+          type: integer
+        description: A unique value identifying this moderation.
+        required: true
+      tags:
+      - submissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Moderation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Moderation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Moderation'
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Moderation'
+          description: ''
+    delete:
+      operationId: submissions_moderation_destroy
+      description: |-
+        Moderation attached to a submission
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission_id
+        schema:
+          type: integer
+        description: A unique value identifying this moderation.
+        required: true
+      tags:
+      - submissions
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /submissions/{submission_id}/votes:
+    get:
+      operationId: submissions_votes_list
+      description: |-
+        Vote management /submissions/(id)/votes (get, post)
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrModeratorOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     * AND if the user is not in the Moderators group     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: path
+        name: submission_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - submissions
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedVoteList'
+          description: ''
+    post:
+      operationId: submissions_votes_create
+      description: |-
+        Vote management /submissions/(id)/votes (get, post)
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrModeratorOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     * AND if the user is not in the Moderators group     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - submissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vote'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Vote'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Vote'
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - tokenAuth: []
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vote'
+          description: ''
   /users:
     get:
       operationId: users_list
@@ -1037,8 +1423,7 @@ paths:
     get:
       operationId: votes_retrieve
       description: |-
-        Votes detail and delete. We allow a subset of functionality, the rest must go
-        through /moderatedsubmission/<pk>/votes
+        Vote management, through /votes (put, patch, destroy) or through
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
@@ -1068,8 +1453,7 @@ paths:
     delete:
       operationId: votes_destroy
       description: |-
-        Votes detail and delete. We allow a subset of functionality, the rest must go
-        through /moderatedsubmission/<pk>/votes
+        Vote management, through /votes (put, patch, destroy) or through
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
@@ -1094,70 +1478,6 @@ paths:
           description: No response body
 components:
   schemas:
-    Article:
-      type: object
-      description: |-
-        any field that has a value of null _or_ empty string in the output json
-        will be removed see discussion https://stackoverflow.com/a/45569581
-      properties:
-        url:
-          type: string
-          format: uri
-          readOnly: true
-        status:
-          allOf:
-          - $ref: '#/components/schemas/ArticleStatusEnum'
-          readOnly: true
-        target_url:
-          type: string
-          format: uri
-          readOnly: true
-        title:
-          type: string
-          readOnly: true
-        description:
-          type: string
-          readOnly: true
-        thumbnail:
-          type: string
-          readOnly: true
-        last_updated:
-          type: string
-          format: date-time
-          readOnly: true
-        date_created:
-          type: string
-          format: date-time
-          readOnly: true
-        submitter:
-          type: string
-          format: uri
-          readOnly: true
-        moderated_submission:
-          type: string
-          format: uri
-          readOnly: true
-        approver:
-          type: string
-          format: uri
-          readOnly: true
-      required:
-      - approver
-      - date_created
-      - description
-      - last_updated
-      - moderated_submission
-      - status
-      - submitter
-      - target_url
-      - thumbnail
-      - title
-      - url
-    ArticleStatusEnum:
-      enum:
-      - visible
-      - hidden
-      type: string
     AuthToken:
       type: object
       properties:
@@ -1174,21 +1494,20 @@ components:
       - password
       - token
       - username
-    ModeratedSubmission:
+    Fetch:
       type: object
-      description: |-
-        any field that has a value of null _or_ empty string in the output json
-        will be removed see discussion https://stackoverflow.com/a/45569581
+      description: The result of a bot retrieving the information
       properties:
         url:
           type: string
           format: uri
           readOnly: true
-        target_url:
+        status:
+          $ref: '#/components/schemas/FetchStatusEnum'
+        owner:
           type: string
           format: uri
-          nullable: true
-          maxLength: 200
+          readOnly: true
         title:
           type: string
           nullable: true
@@ -1199,10 +1518,58 @@ components:
           maxLength: 250
         thumbnail:
           type: string
+          nullable: true
+          maxLength: 250
+        thumbnail_image:
+          type: string
+          format: uri
+          nullable: true
+        fetched_page:
+          type: string
+          maxLength: 61440
+        last_updated:
+          type: string
+          format: date-time
+          readOnly: true
+        date_created:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - date_created
+      - last_updated
+      - owner
+      - url
+    FetchStatusEnum:
+      enum:
+      - pending
+      - fetched
+      - rej_error
+      - rej_fetch
+      type: string
+    Moderation:
+      type: object
+      description: A human evaluation of a submission
+      properties:
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        target_url:
+          type: string
+          format: uri
           readOnly: true
         status:
-          allOf:
-          - $ref: '#/components/schemas/ModeratedSubmissionStatusEnum'
+          $ref: '#/components/schemas/ModerationStatusEnum'
+        owner:
+          type: string
+          format: uri
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
           readOnly: true
         last_updated:
           type: string
@@ -1212,53 +1579,21 @@ components:
           type: string
           format: date-time
           readOnly: true
-        bot_title:
-          type: string
-          readOnly: true
-        bot_description:
-          type: string
-          readOnly: true
-        bot_summary:
-          type: string
-          readOnly: true
-        bot_sentiment:
-          type: string
-          readOnly: true
-        bot_thumbnail:
-          type: string
-          readOnly: true
-        submission:
-          type: string
-          format: uri
-          readOnly: true
-        last_modified_by:
-          type: string
-          format: uri
-          readOnly: true
       required:
-      - bot_description
-      - bot_sentiment
-      - bot_summary
-      - bot_thumbnail
-      - bot_title
       - date_created
-      - last_modified_by
+      - description
       - last_updated
-      - status
-      - submission
-      - thumbnail
+      - owner
+      - target_url
+      - title
       - url
-    ModeratedSubmissionStatusEnum:
+    ModerationStatusEnum:
       enum:
-      - new
-      - ready
+      - pending
       - accepted
-      - rej_spam
-      - rej_dupe
-      - rej_votes
       - rejected
       type: string
-    PaginatedArticleList:
+    PaginatedFetchList:
       type: object
       properties:
         count:
@@ -1277,8 +1612,8 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Article'
-    PaginatedModeratedSubmissionList:
+            $ref: '#/components/schemas/Fetch'
+    PaginatedModerationList:
       type: object
       properties:
         count:
@@ -1297,7 +1632,7 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/ModeratedSubmission'
+            $ref: '#/components/schemas/Moderation'
     PaginatedSubmissionList:
       type: object
       properties:
@@ -1358,21 +1693,20 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Vote'
-    PatchedModeratedSubmission:
+    PatchedFetch:
       type: object
-      description: |-
-        any field that has a value of null _or_ empty string in the output json
-        will be removed see discussion https://stackoverflow.com/a/45569581
+      description: The result of a bot retrieving the information
       properties:
         url:
           type: string
           format: uri
           readOnly: true
-        target_url:
+        status:
+          $ref: '#/components/schemas/FetchStatusEnum'
+        owner:
           type: string
           format: uri
-          nullable: true
-          maxLength: 200
+          readOnly: true
         title:
           type: string
           nullable: true
@@ -1383,10 +1717,46 @@ components:
           maxLength: 250
         thumbnail:
           type: string
+          nullable: true
+          maxLength: 250
+        thumbnail_image:
+          type: string
+          format: uri
+          nullable: true
+        fetched_page:
+          type: string
+          maxLength: 61440
+        last_updated:
+          type: string
+          format: date-time
+          readOnly: true
+        date_created:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedModeration:
+      type: object
+      description: A human evaluation of a submission
+      properties:
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        target_url:
+          type: string
+          format: uri
           readOnly: true
         status:
-          allOf:
-          - $ref: '#/components/schemas/ModeratedSubmissionStatusEnum'
+          $ref: '#/components/schemas/ModerationStatusEnum'
+        owner:
+          type: string
+          format: uri
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        description:
+          type: string
           readOnly: true
         last_updated:
           type: string
@@ -1396,69 +1766,36 @@ components:
           type: string
           format: date-time
           readOnly: true
-        bot_title:
-          type: string
-          readOnly: true
-        bot_description:
-          type: string
-          readOnly: true
-        bot_summary:
-          type: string
-          readOnly: true
-        bot_sentiment:
-          type: string
-          readOnly: true
-        bot_thumbnail:
-          type: string
-          readOnly: true
-        submission:
-          type: string
-          format: uri
-          readOnly: true
-        last_modified_by:
-          type: string
-          format: uri
-          readOnly: true
     PatchedSubmission:
       type: object
-      description: |-
-        any field that has a value of null _or_ empty string in the output json
-        will be removed see discussion https://stackoverflow.com/a/45569581
+      description: A submission object that is in initial processing
       properties:
         url:
           type: string
           format: uri
           readOnly: true
-        date:
-          type: string
-          format: date-time
-        fetched_date:
-          type: string
-          format: date-time
-        fetched_page:
-          type: string
         target_url:
           type: string
           format: uri
           maxLength: 200
+        status:
+          type: string
+          readOnly: true
+        owner:
+          type: string
+          format: uri
+          readOnly: true
         title:
           type: string
           maxLength: 120
         description:
           type: string
           maxLength: 250
-        status:
-          type: string
-          readOnly: true
-        date_created:
+        date:
           type: string
           format: date-time
-          readOnly: true
-        last_updated:
-          type: string
-          format: date-time
-          readOnly: true
-        owner:
+          nullable: true
+        moderation:
           type: string
           format: uri
           readOnly: true
@@ -1488,50 +1825,39 @@ components:
             granted to each of their groups.
     Submission:
       type: object
-      description: |-
-        any field that has a value of null _or_ empty string in the output json
-        will be removed see discussion https://stackoverflow.com/a/45569581
+      description: A submission object that is in initial processing
       properties:
         url:
           type: string
           format: uri
           readOnly: true
-        date:
-          type: string
-          format: date-time
-        fetched_date:
-          type: string
-          format: date-time
-        fetched_page:
-          type: string
         target_url:
           type: string
           format: uri
           maxLength: 200
+        status:
+          type: string
+          readOnly: true
+        owner:
+          type: string
+          format: uri
+          readOnly: true
         title:
           type: string
           maxLength: 120
         description:
           type: string
           maxLength: 250
-        status:
-          type: string
-          readOnly: true
-        date_created:
+        date:
           type: string
           format: date-time
-          readOnly: true
-        last_updated:
-          type: string
-          format: date-time
-          readOnly: true
-        owner:
+          nullable: true
+        moderation:
           type: string
           format: uri
           readOnly: true
       required:
-      - date_created
-      - last_updated
+      - moderation
       - owner
       - status
       - target_url
@@ -1614,9 +1940,8 @@ components:
         Votes are provided in Lists and don't link back to their
         submissions once serialized
       properties:
-        url:
-          type: string
-          format: uri
+        id:
+          type: integer
           readOnly: true
         value:
           $ref: '#/components/schemas/ValueEnum'
@@ -1628,20 +1953,18 @@ components:
           type: string
           format: date-time
           readOnly: true
-        moderated_submission:
-          type: string
-          format: uri
+        submission:
+          type: integer
           readOnly: true
         owner:
-          type: string
-          format: uri
+          type: integer
           readOnly: true
       required:
       - date_created
+      - id
       - last_updated
-      - moderated_submission
       - owner
-      - url
+      - submission
   securitySchemes:
     basicAuth:
       type: http

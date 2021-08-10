@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",  # <-- added, to expose rest api
     "rest_framework.authtoken",  # enable token authentication
+    "django_filters",  # to allow filtering on rest framework API
     "custom_admin_actions",  # additional row of actions for ModelAdmins
     "news",
     "drf_spectacular",  # <-- live documentation
@@ -132,6 +133,8 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = "public/static/"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = "public/media/"
 
 # JWT authentication with djangorestframework-simplejwt
 
@@ -186,9 +189,9 @@ ADMIN_REORDER = {
             "label": "Article Management",
             "models": (
                 "news.Submission",
-                "news.ModeratedSubmission",
+                # "news.ModeratedSubmission",
                 "news.Vote",
-                "news.Article",
+                # "news.Article",
             ),
         },
     ],

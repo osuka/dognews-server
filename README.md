@@ -187,65 +187,24 @@ Filled on create:
 * user
 * title (optional)
 * description (optional)
-* status: (New, Accepted, Rejected: Could not fetch)
+* status: (New, Accepted, Rejected: Could not fetch, Rejected: Moderation,...)
+* date: date of article (example if it's a newspaper) (optional)
 * date created
 * last updated
 
 Filled by bots:
 
-* fetched_page: retrieved data
-* fetched_date: when it was retrieved
+* fetch: one to one related object with scraped data
+* analysis: one to one related object with sentiment analysis
 
-### ModeratedSubmission
+Filled by a moderator:
 
-Filled on create:
-
-* auto id
-* submission: fk submission
-* status: (Processing, Ready for review, Accepted, Rejected: Spam, Rejected: Duplicate, Rejected: Generic)
-* date created
-* last updated
-
-Filled initially and editable by moderator:
-
-* target_url: set to copy of target url
-* title: set to copy of submitted text (if present)
-* description: set to copy of submitted description (if present)
-* thumbnail: set to emtpy initially, set to generated thumbnail afterwards
-
-Filled by bots:
-
-* bot_title: usually from opengraph, provided by the site itself
-* bot_summary: usually from opengraph, provided by the site itself
-* bot_image_url: usually from opengraph, provided by the site itself
-* bot_summary: summarised from fetched_text
-* bot_sentiment: automatically set based on sentiment analysis
-* bot_thumbnail: image name
+* moderation: one to one related object with human moderation details
 
 Filled by collaborators:
 
-* votes: set of Votes given by users
+* votes: one to many related objects that are human votes
 
-### Vote
-
-Filled on create:
-
-* auto id
-* user: fk user
-* moderated_submission: fk ModeratedSubmissions
-* value: up, down, flag
-* unique together: (user, moderated_submission)
-
-### Article
-
-* auto id
-* url (unique)
-* submmiter: fk User
-* title
-* description
-* moderated_submission: fk PostedItems (can be null, on_delete set_null)
-* date created
-* last updated
 
 ## Bots
 
@@ -256,30 +215,31 @@ as a user in the database, belonging to the group 'Bots'
 
 Input
 
-* PostedItems with status = New
+* Submissions without a fetch association
 
 Action
 
 * if domain(url) in blacklist mark PosedItem as rejected: Blacklist
 * fetch url from the net
-* if fetched: create new item in ModerationQueue, mark PostedItem as accepted
-* if error: if error is temporary do nothing, else mark PostedItem as rejected: could not fetch
+* if fetched: create new item in ModerationQueue, mark fetch status as Fetched
+* if error: if error is temporary do nothing, else mark submission as rejected, mark fetch status as Failed
 
 ## Analysis bot
 
 Input
 
-* ModerationQueue entries with status = Processing and generated_sentiment null
+* Submissions without an analysis association
 
 Action
 
 * parses fetched_text, saves generated_sentiment = '' | 'bad'
+* If bad, sets submission status to rejected
 
 ### Summary bot
 
 Input
 
-* ModerationQueue entries with status = Processing and generated_summary null
+* Submissions with an fetch status of passed
 
 Action
 
@@ -289,7 +249,7 @@ Action
 
 Input
 
-* ModerationQueue entries with status = Processing and generated_thumbnail null
+* Submissions with an fetch status of passed
 
 Action
 
@@ -297,13 +257,3 @@ Action
   a square thumbnail, store it and save the name of the generated_thumbnail
 * if the value is null or fails to fetch, sets generated_thumbnail to 'default-thumbnail.png'
 
-### Accepter
-
-Input
-
-* ModerationQueue entries with status = Processing and generated_thumbnail,
-  generated_sentiment, generated_summary not null
-
-Action
-
-* Marks item as status Ready for review
