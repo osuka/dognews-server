@@ -118,17 +118,20 @@ class PermissionAdmin(admin.ModelAdmin):
 class FetchInline(SavesOwnerMixin, admin.StackedInline):
     model = models.Fetch
     fields = (
+        "status",
         "title",
+        "description",
         (
-            "description",
             "thumbnail",
             "thumbnail_preview",
             "thumbnail_image",
             "thumbnail_image_preview",
         ),
+        "fetched_page",
         ("last_updated", "date_created", "owner"),
     )
     readonly_fields = [
+        "status",
         "title",
         "description",
         "thumbnail",
@@ -209,10 +212,19 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
         "title",
         "target_url",
         "status",
+        "fetch",
         "moderation",
     ]
     date_hierarchy = "date_created"
-    list_filter = ["status", "date_created", "last_updated", "date", "owner"]
+    list_filter = [
+        "status",
+        "moderation__status",
+        "fetch__status",
+        "date",
+        "date_created",
+        "last_updated",
+        "owner",
+    ]
     search_fields = ["target_url", "title", "description", "owner__username"]
     list_display_links = ["last_updated", "target_url", "title"]
     inlines = [FetchInline, AnalysisInline, ModerationInline, VoteInline]

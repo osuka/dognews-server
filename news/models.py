@@ -176,9 +176,14 @@ class Fetch(models.Model):
     thumbnail = models.CharField(
         max_length=250, null=True, blank=True, default=None, editable=True
     )
-    thumbnail_image = models.ImageField(upload_to=user_directory_path, null=True)
+    thumbnail_image = models.ImageField(
+        upload_to=user_directory_path, null=True, blank=True
+    )
 
     fetched_page = models.TextField(max_length=60 * 1024, blank=True, editable=True)
+
+    def __str__(self):
+        return f"Fetch:{self.status}"
 
 
 class Analysis(models.Model):
@@ -203,6 +208,9 @@ class Analysis(models.Model):
 
     summary = models.TextField(null=True, blank=True, default=None, editable=True)
     sentiment = models.TextField(null=True, blank=True, default=None, editable=True)
+
+    def __str__(self) -> str:
+        return f"Analysis:{self.status} ({self.owner})"
 
 
 class Moderation(models.Model):
@@ -234,7 +242,7 @@ class Moderation(models.Model):
     date_created = models.DateTimeField(auto_now_add=True, editable=False)
 
     def __str__(self) -> str:
-        return f"moderation by {self.owner} on {self.last_updated}"
+        return f"Mod:{self.status} ({self.owner})"
 
 
 class Vote(models.Model):
@@ -291,24 +299,30 @@ def calculate_status(submission: Submission):
         moderation: Moderation = submission.moderation
         if moderation.status == ModerationStatuses.ACCEPTED:
             set_status(submission, SubmissionStatuses.ACCEPTED)
+            return
         elif moderation.status == ModerationStatuses.REJECTED:
             set_status(submission, SubmissionStatuses.REJECTED_MOD)
+            return
         else:
+            # set this as basis unless others have more detail
             set_status(submission, SubmissionStatuses.PENDING)
-    elif hasattr(submission, "fetch"):
+
+    if hasattr(submission, "fetch"):
         fetchobj: Fetch = submission.fetch
         # only rejections change the main status
         if fetchobj.status == FetchStatuses.REJECTED_BANNED:
             set_status(submission, SubmissionStatuses.REJECTED_BANNED)
+            return
         elif fetchobj.status == FetchStatuses.REJECTED_ERROR:
             set_status(submission, SubmissionStatuses.REJECTED_FETCH)
-    elif hasattr(submission, "analysis"):
+            return
+
+    if hasattr(submission, "analysis"):
         analysis: Analysis = submission.analysis
         # only rejections change the main status
         if analysis.status == AnalysisStatuses.FAILED:
             set_status(submission, SubmissionStatuses.REJECTED_SENTIMENT)
-    else:
-        set_status(submission, SubmissionStatuses.PENDING)
+            return
 
 
 @receiver(post_save, sender=Moderation)

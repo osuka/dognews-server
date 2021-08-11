@@ -22,7 +22,6 @@ from rest_framework.authtoken import views as authviews
 from rest_framework.routers import SimpleRouter
 from drf_spectacular.views import (
     SpectacularAPIView,
-    SpectacularRedocView,
     SpectacularSwaggerView,
 )
 from rest_framework_simplejwt.views import (
@@ -100,11 +99,6 @@ urlpatterns += [
         SpectacularSwaggerView.as_view(url_name="schema"),
         name="swagger-ui",
     ),
-    # path(
-    #     "api/schema/redoc/",
-    #     SpectacularRedocView.as_view(url_name="schema"),
-    #     name="redoc",
-    # ),
 ]
 
 # For Token based authentication - this endpoint allows a user to request a token by

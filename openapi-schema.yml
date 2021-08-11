@@ -723,12 +723,37 @@ paths:
         + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
+      - in: query
+        name: analysis__status
+        schema:
+          type: string
+          enum:
+          - failed
+          - passed
+          - pending
+      - in: query
+        name: fetch__status
+        schema:
+          type: string
+          enum:
+          - fetched
+          - pending
+          - rej_error
+          - rej_fetch
       - name: limit
         required: false
         in: query
         description: Number of results to return per page.
         schema:
           type: integer
+      - in: query
+        name: moderation__status
+        schema:
+          type: string
+          enum:
+          - accepted
+          - pending
+          - rejected
       - name: offset
         required: false
         in: query
@@ -1770,6 +1795,9 @@ components:
       type: object
       description: A submission object that is in initial processing
       properties:
+        id:
+          type: integer
+          readOnly: true
         url:
           type: string
           format: uri
@@ -1795,10 +1823,6 @@ components:
           type: string
           format: date-time
           nullable: true
-        moderation:
-          type: string
-          format: uri
-          readOnly: true
     PatchedUser:
       type: object
       properties:
@@ -1827,6 +1851,9 @@ components:
       type: object
       description: A submission object that is in initial processing
       properties:
+        id:
+          type: integer
+          readOnly: true
         url:
           type: string
           format: uri
@@ -1852,12 +1879,8 @@ components:
           type: string
           format: date-time
           nullable: true
-        moderation:
-          type: string
-          format: uri
-          readOnly: true
       required:
-      - moderation
+      - id
       - owner
       - status
       - target_url

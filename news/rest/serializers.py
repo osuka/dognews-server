@@ -65,6 +65,7 @@ class SubmissionSerializer(
     class Meta:
         model = Submission
         fields = [
+            "id",
             "url",
             "target_url",
             "status",
@@ -72,7 +73,6 @@ class SubmissionSerializer(
             "title",
             "description",
             "date",
-            "moderation",
         ]
         read_only_fields = [
             "owner",

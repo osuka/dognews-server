@@ -38,8 +38,9 @@ class VoteModelTests(TestCase):
     def test_can_change_vote(self):
         """any authenticated user can vote multiple times, but only one vote is kept"""
         submission: Submission = Submission.objects.create(**sample_submission)
-        vote = Vote.objects.create(value=Vote.Values.DOWN, owner=self.rw_user)
-        submission.votes.add(vote)  # automatically saves
+        vote_object = Vote.objects.create(
+            submission=submission, value=Vote.Values.DOWN, owner=self.rw_user
+        )
         for value in [Vote.Values.DOWN, Vote.Values.UP, Vote.Values.FLAG]:
             vote_object = submission.votes.all()[0]
             vote_object.value = value

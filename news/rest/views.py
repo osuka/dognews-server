@@ -81,7 +81,12 @@ class SubmissionViewSet(viewsets.ModelViewSet):
     # Allow /submissions?ordering=date_created
     ordering_fields = ["date_created"]
     # Allow /submissions?status=pending  for example
-    filterset_fields = ["status"]
+    filterset_fields = [
+        "status",
+        "moderation__status",
+        "fetch__status",
+        "analysis__status",
+    ]
 
     def perform_create(self, serializer):
         # add current user if missing
