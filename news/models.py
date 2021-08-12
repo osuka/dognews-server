@@ -63,7 +63,7 @@ class ModerationStatuses(models.TextChoices):
     """Lifecycle status"""
 
     PENDING = "pending", "Pending"
-    ACCEPTED = "accepted", "Moderation passed"
+    ACCEPTED = "accepted", "Moderator accepted"
     REJECTED = "rejected", "Moderator rejected"
 
 

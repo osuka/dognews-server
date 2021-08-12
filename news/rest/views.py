@@ -19,6 +19,7 @@ from dogauth.permissions import (
     IsOwnerOrModeratorOrStaff,
 )
 from .serializers import (
+    ArticleSerializer,
     ModerationSerializer,
     SubmissionSerializer,
     FetchSerializer,
@@ -81,12 +82,14 @@ class SubmissionViewSet(viewsets.ModelViewSet):
     # Allow /submissions?ordering=date_created
     ordering_fields = ["date_created"]
     # Allow /submissions?status=pending  for example
-    filterset_fields = [
-        "status",
-        "moderation__status",
-        "fetch__status",
-        "analysis__status",
-    ]
+    filterset_fields = {
+        "status": ["exact"],
+        "moderation": ["isnull"],
+        "moderation__status": ["exact", "isnull"],
+        "fetch": ["isnull"],
+        "fetch__status": ["exact", "isnull"],
+        "analysis__status": ["exact", "isnull"],
+    }
 
     def perform_create(self, serializer):
         # add current user if missing
@@ -278,14 +281,14 @@ class SubmissionVoteViewSet(
 #             raise NotFound("Can only add via /moderatedsubmissions endpoint")
 
 
-# class ArticleViewSet(
-#     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
-# ):
-#     """
-#     Final accepted articles, read only view.
-#     *Public*
-#     """
+class ArticleViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    """
+    Final accepted articles, read only view.
+    *Public*
+    """
 
-#     queryset = Article.objects.all().order_by("-date_created")
-#     serializer_class = ArticleSerializer
-#     permission_classes = []
+    queryset = Submission.objects.filter(status="accepted").order_by("-date_created")
+    serializer_class = ArticleSerializer
+    permission_classes = []

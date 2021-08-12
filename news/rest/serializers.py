@@ -2,7 +2,7 @@
 These transform models into various representations
 """
 from collections import OrderedDict
-from typing import Any
+from typing import Any, List
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from rest_framework import serializers
@@ -166,19 +166,58 @@ class VoteSerializer(NonNullModelSerializer):
 # # --------------------------------------
 
 
-# class ArticleSerializer(NonNullModelSerializer):
-#     class Meta:
-#         model = Article
-#         exclude = []
+def _first(elements: List[str], defvalue: str) -> str:
+    """Returns the first element that is not none.
+    If all are none returns the default provided"""
+    l = [x for x in elements if x]
+    if len(l):
+        return l[0]
+    return defvalue
 
-#         read_only_fields = [
-#             "status",
-#             "target_url",
-#             "title",
-#             "description",
-#             "thumbnail",
-#             "submitter",
-#             "moderated_submission",
-#             "last_updated",
-#             "date_created",
-#         ]
+
+class ArticleSerializer(NonNullModelSerializer):
+    """An article is an approved submission and it takes the title
+    and description from either the automated bots or the moderation,
+    if the moderator entered any"""
+
+    thumbnail = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
+    submitter = serializers.CharField(source="owner__username", read_only=True)
+    approver = serializers.CharField(
+        source="moderation__owner__username", read_only=True
+    )
+
+    class Meta:
+        model = Submission
+
+        fields = read_only_fields = [
+            "url",
+            "status",
+            "target_url",
+            "title",
+            "description",
+            "thumbnail",
+            "last_updated",
+            "date_created",
+            "submitter",
+            # "moderated_submission",
+            "approver",
+        ]
+
+    def get_thumbnail(self, sub: Submission):
+        return _first(
+            [sub.fetch.thumbnail],
+            "https://onlydognews.com/gfx/site/onlydognews-logo-main.png",
+        )
+
+    def get_description(self, sub: Submission):
+        values = [sub.moderation.description, sub.fetch.description, sub.description]
+        return _first(values, "")
+
+    def get_title(self, sub: Submission):
+        values = [sub.moderation.title, sub.fetch.title, sub.title]
+        return _first(values, "")
+
+    def get_target_url(self, sub: Submission):
+        return _first([sub.moderation.target_url], sub.target_url)

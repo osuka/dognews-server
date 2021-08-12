@@ -42,6 +42,7 @@ class _SavesRequestUserFormset(BaseInlineFormSet):
 
     def add_user(self, instance):
         if self.request_user:
+            # if the owner is set, it is maintained - if not, it's set to current user
             if hasattr(instance, self.field_to_store_user):
                 setattr(instance, self.field_to_store_user, self.request_user)
                 instance.save()
@@ -51,12 +52,6 @@ class _SavesRequestUserFormset(BaseInlineFormSet):
         instance = super().save_new(form, commit)
         self.add_user(instance=instance)
         return instance
-
-    def save_existing(self, form, instance, commit=True):
-        """Save and return an existing model instance for the given form."""
-        result = super().save_existing(form, instance, commit)
-        self.add_user(instance=result)
-        return result
 
 
 class SavesLastModifiedByFormset(_SavesRequestUserFormset):
@@ -80,7 +75,9 @@ class SavesRequestUserMixin:
 
     def save_model(self, request, obj, form, change):
         """For normal ModelAdmins, this is invoked before save"""
-        if hasattr(obj, self.field_to_store_user):
+        if hasattr(obj, self.field_to_store_user) and not getattr(
+            obj, self.field_to_store_user
+        ):
             setattr(obj, self.field_to_store_user, request.user)
         super().save_model(request, obj, form, change)
 
@@ -130,24 +127,31 @@ class FetchInline(SavesOwnerMixin, admin.StackedInline):
         "fetched_page",
         ("last_updated", "date_created", "owner"),
     )
-    readonly_fields = [
-        "status",
-        "title",
-        "description",
-        "thumbnail",
-        "thumbnail_preview",
-        "thumbnail_image_preview",
-        "last_updated",
-        "date_created",
-        "owner",
-    ]
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = [
+            "title",
+            "description",
+            "thumbnail",
+            "thumbnail_preview",
+            "thumbnail_image_preview",
+            "last_updated",
+            "date_created",
+            "owner",
+        ]
+        # staff can request to re-fetch article
+        if not request.user.is_staff:
+            readonly_fields += "status"
+        return readonly_fields
 
     def thumbnail_preview(self, obj):
         if not obj.thumbnail:
             return "-"
 
         url = f"{obj.thumbnail}"
-        return mark_safe(f'<a href="{url}"><img src="{url}" width="128px"/></a>')
+        return mark_safe(
+            f'<a rel="noreferrer" href="{url}"><img src="{url}" width="128px"/></a>'
+        )
 
     def thumbnail_image_preview(self, obj):
         return mark_safe(
@@ -162,17 +166,26 @@ class FetchInline(SavesOwnerMixin, admin.StackedInline):
 class AnalysisInline(SavesOwnerMixin, admin.StackedInline):
     model = models.Analysis
     fields = (
+        (
+            "status",
+            "sentiment",
+        ),
         "summary",
-        "sentiment",
         ("last_updated", "date_created", "owner"),
     )
-    readonly_fields = (
-        "summary",
-        "sentiment",
-        "last_updated",
-        "date_created",
-        "owner",
-    )
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = [
+            "summary",
+            "sentiment",
+            "last_updated",
+            "date_created",
+            "owner",
+        ]
+        # staff can request to re-analyse article
+        if not request.user.is_staff:
+            readonly_fields += "status"
+        return readonly_fields
 
 
 class ModerationInline(SavesOwnerMixin, admin.StackedInline):

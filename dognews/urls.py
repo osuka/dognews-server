@@ -38,6 +38,7 @@ from news.rest.views import (
     SubmissionVoteViewSet,
     UserViewSet,
     VoteViewSet,
+    ArticleViewSet,
 )
 
 urlpatterns = []
@@ -71,7 +72,8 @@ urlpatterns += [
         SubmissionVoteViewSet.as_view({"get": "list", "post": "create"}),
     ),
 ]
-# router.register(r"articles", ArticleViewSet)
+
+router.register(r"articles", ArticleViewSet)
 
 router.register(r"users", UserViewSet)
 # router.register(r'groups', GroupViewSet)
