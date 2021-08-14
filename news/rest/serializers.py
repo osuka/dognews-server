@@ -73,6 +73,8 @@ class SubmissionSerializer(
             "title",
             "description",
             "date",
+            "fetch",
+            # "moderation",
         ]
         read_only_fields = [
             "owner",
@@ -82,6 +84,7 @@ class SubmissionSerializer(
             "last_modified_by",
             "domain",
             "moderation",
+            "fetch",
         ]
 
 
@@ -133,6 +136,7 @@ class FetchSerializer(NonNullModelSerializer, serializers.HyperlinkedModelSerial
             "title",
             "description",
             "thumbnail",
+            "generated_thumbnail",
             "thumbnail_image",
             "fetched_page",
             "last_updated",
@@ -205,19 +209,22 @@ class ArticleSerializer(NonNullModelSerializer):
             "approver",
         ]
 
-    def get_thumbnail(self, sub: Submission):
+    def get_thumbnail(self, sub: Submission) -> str:
         return _first(
-            [sub.fetch.thumbnail],
+            [
+                f"https://dognewsserver.gatillos.com/media/{sub.fetch.generated_thumbnail}",
+                f"https://dognewsserver.gatillos.com/media/{sub.fetch.thumbnail}",
+            ],
             "https://onlydognews.com/gfx/site/onlydognews-logo-main.png",
         )
 
-    def get_description(self, sub: Submission):
+    def get_description(self, sub: Submission) -> str:
         values = [sub.moderation.description, sub.fetch.description, sub.description]
         return _first(values, "")
 
-    def get_title(self, sub: Submission):
+    def get_title(self, sub: Submission) -> str:
         values = [sub.moderation.title, sub.fetch.title, sub.title]
         return _first(values, "")
 
-    def get_target_url(self, sub: Submission):
+    def get_target_url(self, sub: Submission) -> str:
         return _first([sub.moderation.target_url], sub.target_url)

@@ -17,6 +17,18 @@ from . import models
 # pylint: disable=missing-module-docstring, missing-function-docstring, missing-class-docstring
 
 
+def _preview(url):
+    if not url:
+        return "-"
+
+    if not url.startswith("http"):
+        url = f"/media/{url}"
+
+    return mark_safe(
+        f'<a rel="noreferrer" href="{url}"><img src="{url}" width="128px"/></a>'
+    )
+
+
 def link_to_submission(submission: models.Submission):
     return reverse(
         "admin:%s_%s_change"
@@ -121,6 +133,10 @@ class FetchInline(SavesOwnerMixin, admin.StackedInline):
         (
             "thumbnail",
             "thumbnail_preview",
+        ),
+        (
+            "generated_thumbnail",
+            "generated_thumbnail_preview",
             "thumbnail_image",
             "thumbnail_image_preview",
         ),
@@ -134,6 +150,7 @@ class FetchInline(SavesOwnerMixin, admin.StackedInline):
             "description",
             "thumbnail",
             "thumbnail_preview",
+            "generated_thumbnail_preview",
             "thumbnail_image_preview",
             "last_updated",
             "date_created",
@@ -145,13 +162,10 @@ class FetchInline(SavesOwnerMixin, admin.StackedInline):
         return readonly_fields
 
     def thumbnail_preview(self, obj):
-        if not obj.thumbnail:
-            return "-"
+        return _preview(obj.thumbnail)
 
-        url = f"{obj.thumbnail}"
-        return mark_safe(
-            f'<a rel="noreferrer" href="{url}"><img src="{url}" width="128px"/></a>'
-        )
+    def generated_thumbnail_preview(self, obj):
+        return _preview(obj.generated_thumbnail)
 
     def thumbnail_image_preview(self, obj):
         return mark_safe(
@@ -227,6 +241,7 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
         "status",
         "fetch",
         "moderation",
+        "preview",
     ]
     date_hierarchy = "date_created"
     list_filter = [
@@ -246,6 +261,12 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
     def _moderator(self, obj: models.Submission):
         if hasattr(obj, "moderation"):
             return f"{obj.moderation.owner}"
+        return "-"
+
+    @admin.display(description="Preview")
+    def preview(self, obj):
+        if hasattr(obj, "fetch"):
+            return _preview(obj.fetch.generated_thumbnail)
         return "-"
 
     def get_readonly_fields(self, request, obj: models.Submission = None):

@@ -796,6 +796,10 @@ paths:
         schema:
           type: boolean
       - in: query
+        name: fetch__generated_thumbnail__isnull
+        schema:
+          type: boolean
+      - in: query
         name: fetch__isnull
         schema:
           type: boolean
@@ -810,6 +814,10 @@ paths:
           - rej_fetch
       - in: query
         name: fetch__status__isnull
+        schema:
+          type: boolean
+      - in: query
+        name: fetch__thumbnail__isnull
         schema:
           type: boolean
       - name: limit
@@ -1677,6 +1685,10 @@ components:
           type: string
           nullable: true
           maxLength: 250
+        generated_thumbnail:
+          type: string
+          nullable: true
+          maxLength: 250
         thumbnail_image:
           type: string
           format: uri
@@ -1896,6 +1908,10 @@ components:
           type: string
           nullable: true
           maxLength: 250
+        generated_thumbnail:
+          type: string
+          nullable: true
+          maxLength: 250
         thumbnail_image:
           type: string
           format: uri
@@ -1975,6 +1991,10 @@ components:
           type: string
           format: date-time
           nullable: true
+        fetch:
+          type: string
+          format: uri
+          readOnly: true
     PatchedUser:
       type: object
       properties:
@@ -2031,7 +2051,12 @@ components:
           type: string
           format: date-time
           nullable: true
+        fetch:
+          type: string
+          format: uri
+          readOnly: true
       required:
+      - fetch
       - id
       - owner
       - status

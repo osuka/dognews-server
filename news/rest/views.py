@@ -92,6 +92,8 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         "fetch": ["isnull"],
         "fetch__status": ["exact", "isnull"],
         "analysis__status": ["exact", "isnull"],
+        "fetch__generated_thumbnail": ["isnull"],
+        "fetch__thumbnail": ["isnull"],
     }
 
     def perform_create(self, serializer):
@@ -232,56 +234,6 @@ class SubmissionVoteViewSet(
                 serializer.save()
             else:
                 serializer.save(submission_id=sub_id, owner=self.request.user)
-
-
-# class ModeratedSubmissionVoteViewSet(
-#     mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet
-# ):
-#     """
-#     Votes for a moderated submission - this is tied to its primary key
-#     that must be passed as `moderatedsubmission_pk` kwarg
-#     * multiple posts to the collection from same users will not create
-#     multiple instances, instead subsequent posts will update their vote
-#     """
-
-#     queryset = Vote.objects.all().select_related("moderated_submission")
-#     serializer_class = VoteSerializer
-#     permission_classes = [
-#         IsAuthenticated,
-#         IsOwnerOrModeratorOrStaff,
-#         permissions.DjangoModelPermissions,
-#     ]
-
-#     def get_queryset(self, *args, **kwargs):  # pylint: disable=unused-argument
-#         if "moderated_submission_pk" in self.kwargs:
-#             modsub_id = self.kwargs.get("moderated_submission_pk")
-#             return (
-#                 super()
-#                 .get_queryset(*args, **kwargs)
-#                 .filter(moderated_submission_id=modsub_id)
-#             )
-#         return super().get_queryset(*args, **kwargs)
-
-#     def perform_create(self, serializer):
-#         if "moderated_submission_pk" in self.kwargs:
-#             modsub_id = self.kwargs.get("moderated_submission_pk")
-#             if not ModeratedSubmission.objects.filter(id=modsub_id).exists():
-#                 raise NotFound(f"{modsub_id} does not exist")
-#             moderated_submission: ModeratedSubmission = ModeratedSubmission.objects.get(
-#                 id=modsub_id
-#             )
-#             if moderated_submission.votes.filter(owner=self.request.user).exists():
-#                 # update
-#                 serializer.instance = moderated_submission.votes.get(
-#                     owner=self.request.user  # we know only one will exist
-#                 )
-#                 serializer.save()
-#             else:
-#                 serializer.save(
-#                     moderated_submission_id=modsub_id, owner=self.request.user
-#                 )
-#         else:
-#             raise NotFound("Can only add via /moderatedsubmissions endpoint")
 
 
 class ArticleViewSet(

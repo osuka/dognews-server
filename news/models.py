@@ -176,6 +176,9 @@ class Fetch(models.Model):
     thumbnail = models.CharField(
         max_length=250, null=True, blank=True, default=None, editable=True
     )
+    generated_thumbnail = models.CharField(
+        max_length=250, null=True, blank=True, default=None, editable=True
+    )
     thumbnail_image = models.ImageField(
         upload_to=user_directory_path, null=True, blank=True
     )
