@@ -79,7 +79,7 @@ router.register(r"users", UserViewSet)
 # router.register(r'groups', GroupViewSet)
 
 urlpatterns += [
-    path("admin/", admin.site.urls),
+    path("adminpanel/", admin.site.urls),
 ]
 
 # serve media, but only in local

@@ -27,7 +27,7 @@ DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py createsuperuser
 DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py runserver
 
 # browse the admin UI in your browser
-open http://127.0.0.1:8000/admin
+open http://127.0.0.1:8000/adminpanel
 
 # browse the REST API
 open http://127.0.0.1:8000/swagger/
