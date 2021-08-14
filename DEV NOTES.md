@@ -5,6 +5,54 @@
 
 ---
 
+## 2021-08-14 Throttling login attempts
+
+There's a few ways to attempt a login: via REST and via Django itself.
+
+### For rest-framework
+
+We will define a generic throttling with different values for authenticated and non authenticated requests (more restrictive).
+
+In settings:
+
+```python
+    # Throttling: these apply site-wide
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "5/second",  # applies to all requests form unauntenthicated users
+        "user": "1000/day",  # applies to unauthenticated _and_ authenticated users
+    },
+```
+
+Described in [rest framework's documentation](https://www.django-rest-framework.org/api-guide/throttling/)
+
+With this, after calling too many times breaching the throttle limits, this is returned:
+
+```yaml
+429 Too Many Requests
+Date: Sat, 14 Aug 2021 17:25:37 GMT
+Server: WSGIServer/0.2 CPython/3.9.5
+Content-Type: application/json
+Retry-After: 86383             <--- this is the case for a daily limit (24h in seconds)
+Allow: GET, HEAD, OPTIONS
+X-Frame-Options: DENY
+Content-Length: 72
+Vary: Cookie
+X-Content-Type-Options: nosniff
+Referrer-Policy: same-origin
+
+{"detail":"Request was throttled. Expected available in 86383 seconds."}%
+```
+
+### For django
+
+We _could_ use the django app [django-throttle-requests](https://github.com/sobotklp/django-throttle-requests).
+
+Note done yet.
+
 ## 2021-08-08 Restrict what users can see at view level
 
 Using filtering we can make sure a user can't see objects they shouldn't:
@@ -23,9 +71,9 @@ Using filtering we can make sure a user can't see objects they shouldn't:
 
 See the [reference](https://www.django-rest-framework.org/api-guide/filtering/).
 
-* Add `django-filter` to requirements
-* Add `filter_backends = [django_filters.rest_framework.DjangoFilterBackend]` to the Views we want to enable it for
-* add `'django_filters',` to INSTALLED_APPS
+- Add `django-filter` to requirements
+- Add `filter_backends = [django_filters.rest_framework.DjangoFilterBackend]` to the Views we want to enable it for
+- add `'django_filters',` to INSTALLED_APPS
 
 We can now add to a rest framework view:
 
@@ -37,7 +85,6 @@ class UserListView(generics.ListAPIView):
 ```
 
 > Note this can be done for all of them by adding `"DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],` to `REST_FRAMEWORK` in settings
-
 
 We will also use another filter backend, included with rest-framework to allow a parameter like `?ordering=date_created`
 
@@ -54,18 +101,18 @@ class UserListView(generics.ListAPIView):
 
 Up until now we have been using [drf-yasg](https://github.com/axnsan12/drf-yasg) and now we will be migrating to [drf-spectacular](https://github.com/tfranzel/drf-spectacular) as it's a more up to date project with similar targets.
 
-* drf-yasg can produce documentation and OpenAPI schemas but it only supports version 2.0.
-* drf-spectacular can do the same for OpenAPI 3.0
+- drf-yasg can produce documentation and OpenAPI schemas but it only supports version 2.0.
+- drf-spectacular can do the same for OpenAPI 3.0
 
 Migration involved:
 
-* Remove yasg from requirements-common, pip uninstall it, add drf-spectacular
-* Remove drf-yasg-stubs from requirements-local, pip uninstall it
-* Replace drf_yasg with drf_spectacular in settings/APPLICATIONS.
-* In settings/REST_FRAMEWORK add     "DEFAULT_SCHEMA_CLASS": "dogauth.views.SwaggerAutoSchema"
-* In settings, remove SWAGGER_SETTINGS
-* In dogauth/views our SwaggerAutoSchema class extends now 'drf_spectacular.openapi.AutoSchema' and now we override `get_description` to add a list of the permission restrictions we have defined via [permission classes](./dogauth/permissions.py)
-* In dognews/urls.py we will now be following the drf-spectacular guide:
+- Remove yasg from requirements-common, pip uninstall it, add drf-spectacular
+- Remove drf-yasg-stubs from requirements-local, pip uninstall it
+- Replace drf_yasg with drf_spectacular in settings/APPLICATIONS.
+- In settings/REST_FRAMEWORK add "DEFAULT_SCHEMA_CLASS": "dogauth.views.SwaggerAutoSchema"
+- In settings, remove SWAGGER_SETTINGS
+- In dogauth/views our SwaggerAutoSchema class extends now 'drf_spectacular.openapi.AutoSchema' and now we override `get_description` to add a list of the permission restrictions we have defined via [permission classes](./dogauth/permissions.py)
+- In dognews/urls.py we will now be following the drf-spectacular guide:
 
 ```python
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
@@ -79,9 +126,10 @@ urlpatterns = [
 ```
 
 Now we have:
-* http://localhost:8000/schema to retrieve the openapi.yml schema
-* http://localhost:8000/api/schema/swagger-ui/ to browse using the Swagger UI
-* We could have also redoc but I've disabled it since Swagger seems nicer and allows requests froms the UI in a very intuitive way.
+
+- http://localhost:8000/schema to retrieve the openapi.yml schema
+- http://localhost:8000/api/schema/swagger-ui/ to browse using the Swagger UI
+- We could have also redoc but I've disabled it since Swagger seems nicer and allows requests froms the UI in a very intuitive way.
 
 ---
 
@@ -127,8 +175,8 @@ SWAGGER_SETTINGS = {
 
 It then will add:
 
-* The permission name
-* Whatever comment we have added to the permission class
+- The permission name
+- Whatever comment we have added to the permission class
 
 as in:
 
@@ -187,17 +235,17 @@ pip install ipython
 
 Some notes on ipython:
 
-* `?` for help
-* `!ls -al` to run shell commands
-* `_` previous output
-* `__` previous previous, `___` previous previous previous
-* `help(object.method)` shows help string, as normal python
-* `NewsItem?`shows docstring, file name, type
-* `NewsItem??` shows the code
-* `*News*?` wildcards can be used for searching objects
-* `%load` load code
-* `%page x` pretty print x, paged
-* `%quickref` list more commands in a summary
+- `?` for help
+- `!ls -al` to run shell commands
+- `_` previous output
+- `__` previous previous, `___` previous previous previous
+- `help(object.method)` shows help string, as normal python
+- `NewsItem?`shows docstring, file name, type
+- `NewsItem??` shows the code
+- `*News*?` wildcards can be used for searching objects
+- `%load` load code
+- `%page x` pretty print x, paged
+- `%quickref` list more commands in a summary
 
 ### Create a graph of the models
 
@@ -227,16 +275,16 @@ There's tools that can consume that file and output various types of documentati
 
 Since I'm using django rest framework I'll be using [drf-yasg](https://github.com/axnsan12/drf-yasg) that integrates nicely with it. With a couple of changes the documentation will appear 'magically':
 
-* Load drf_yasg as an application in settings.py
-* Create a schema_view in urls.py using its get_schema_view function
-* Expose the patterns we want for swagger json/yaml, swagger UI and/or redoc (alternative view)
+- Load drf_yasg as an application in settings.py
+- Create a schema_view in urls.py using its get_schema_view function
+- Expose the patterns we want for swagger json/yaml, swagger UI and/or redoc (alternative view)
 
 Exposed URLs are:
 
-* /swagger.json
-* /swagger.yaml
-* /swagger/
-* /redoc/
+- /swagger.json
+- /swagger.yaml
+- /swagger/
+- /redoc/
 
 ## Creating per-environment configuration
 
@@ -244,14 +292,14 @@ I have currently three needs: local, dreamhost and test
 
 Created:
 
-* requirements-common.txt (common)
-* requirements-dreamhost.txt
-* requirements-local.txt
-* module dognews.settings
-  * base.py (common)
-  * dreamhost.py (imports base, extends)
-  * local.py
-  * test.py
+- requirements-common.txt (common)
+- requirements-dreamhost.txt
+- requirements-local.txt
+- module dognews.settings
+  - base.py (common)
+  - dreamhost.py (imports base, extends)
+  - local.py
+  - test.py
 
 Launch with settings:
 
@@ -266,9 +314,9 @@ python manage.py runserver
 
 Django does not support JWT directly but it does support token authentication. The principles are similar:
 
-* A login endpoint that returns a pair of { access_token, refresh_token }
-  * access_token: short-lived (5 minutes typically)
-  * refresh_token: long-lived (for example 1 day)
+- A login endpoint that returns a pair of { access_token, refresh_token }
+  - access_token: short-lived (5 minutes typically)
+  - refresh_token: long-lived (for example 1 day)
 
 For authorization, the tokens can include role information (see Authorization section below)
 
@@ -326,7 +374,7 @@ class MySimpleClient:
 
 ### Adding JWT to django and django-rest-framework
 
-Django doesn't support JWT directly, the recommended package is  djangorestframework-simplejwt.
+Django doesn't support JWT directly, the recommended package is djangorestframework-simplejwt.
 
 > Note that the library was looking for maintainers but seems to be now maintained by a group of devs under SimpleJWT. It can always be forked and tweaked as it's MIT-licensed. Another library called djangorestframework-jwt is now deprecated.
 
@@ -453,12 +501,12 @@ class UserView(generics.UpdateAPIView):
 
 The default model permissions are good for quick admin pages, as they determine which staff users have access to what in a broad sense.
 
-* Example: users in the group 'admins' can see and edit all models
-* Example: users in the group 'new_moderators' can see and edit all articles in the News model, but nothing else etc
+- Example: users in the group 'admins' can see and edit all models
+- Example: users in the group 'new_moderators' can see and edit all articles in the News model, but nothing else etc
 
 For external or system users we may want some more specific permissions. We can do this by overriding the has_permission method but there are also frameworks that fulfill this.
 
-* Example: a user can change their own rating, but not any other's
+- Example: a user can change their own rating, but not any other's
 
 ### Trying django-guardian
 
@@ -519,11 +567,11 @@ Any function can be a predicate.
 
 There's some useful predefined predicates:
 
-* is_authenticated(user)
-* is_superuser(user)
-* is_staff(user), staff users
-* is_active(user)
-* is_group_member(*groups)  (must pertain to all of those groups)
+- is_authenticated(user)
+- is_superuser(user)
+- is_staff(user), staff users
+- is_active(user)
+- is_group_member(\*groups) (must pertain to all of those groups)
 
 ```python
 @rules.predicate
@@ -663,12 +711,12 @@ A model is just the definition of fields, relations and restrictions (validation
 
 Some notes:
 
-* blank=True defines a field as not required
-* for dates, we set default=django.admin.timezone.now - note that we pass the function, not a value - this sets the correct now() field on save, using datetime.now() would just store the one at launch time
-* need to add to INSTALLED_APPS 'restapi' so it loads it
-* the n to m relation between news item and its ratings is defined in ratings with a FK field: `newsItem = models.ForeignKey(NewsItem, on_delete=models.CASCADE)`
-* for embedded serialization (ie newsitem object includes a list of rating objects), simply generate a serializer for ratings and add it to the newsitem serializer as `ratings = RatingSerializer(many=True, required=False)`
-* to represent externally in a json API where you can update a rating directly with a patch, I'm using the python module `rest_framework_nested`, an extension to django rest framework: creating a new nested router inside urls.py for it and extending the serializer to work nicely with it
+- blank=True defines a field as not required
+- for dates, we set default=django.admin.timezone.now - note that we pass the function, not a value - this sets the correct now() field on save, using datetime.now() would just store the one at launch time
+- need to add to INSTALLED_APPS 'restapi' so it loads it
+- the n to m relation between news item and its ratings is defined in ratings with a FK field: `newsItem = models.ForeignKey(NewsItem, on_delete=models.CASCADE)`
+- for embedded serialization (ie newsitem object includes a list of rating objects), simply generate a serializer for ratings and add it to the newsitem serializer as `ratings = RatingSerializer(many=True, required=False)`
+- to represent externally in a json API where you can update a rating directly with a patch, I'm using the python module `rest_framework_nested`, an extension to django rest framework: creating a new nested router inside urls.py for it and extending the serializer to work nicely with it
 
 Every time we modify the models, a migration needs to be created. Django does this magically with:
 
@@ -701,7 +749,7 @@ Vary: Accept
 
 Click on the users and groups links to go to their pages.
 
-You can verify / use an alternative editor through the Django Admin console, which is unrelated to the django rest framework and  lives under `/admin` [localhost:8181/admin](http://localhost:8181/admin).
+You can verify / use an alternative editor through the Django Admin console, which is unrelated to the django rest framework and lives under `/admin` [localhost:8181/admin](http://localhost:8181/admin).
 
 > NOTE: password is not in the forms displayed by REST for the users, nor is it in the Admin console UI directly. Password change is done through `http://localhost:8181/admin/password_change` in the admin console, that has the typical 'previous password' requirement.
 
@@ -735,8 +783,8 @@ Enable the rest framework itself by adding the string `'rest_framework'` to the 
 
 A few quick concepts in Django Rest Framework:
 
-* Serializer: representation of the model, similar to a POJO in java, or a json object
-* View: the exposed actions (determins what urls are available and what is shown on each, for instance 'a list of all user')
+- Serializer: representation of the model, similar to a POJO in java, or a json object
+- View: the exposed actions (determins what urls are available and what is shown on each, for instance 'a list of all user')
 
 ### Create serializers for the auth objects
 
@@ -805,6 +853,7 @@ urlpatterns = [
 With this we are publishing under `/users`, `/groups` and ca do things like `GET /users/0/groups`.
 
 About the `api-auth/` URLs there, they are suggested by the DRF tutorial:
+
 > Finally, we're including default login and logout views for use with the browsable API. That's optional, but useful if your API requires authentication and you want to use the browsable API.
 
 ---

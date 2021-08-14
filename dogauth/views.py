@@ -1,9 +1,10 @@
 from typing import List, Optional
 
 from collections import namedtuple
-
 from drf_spectacular.openapi import AutoSchema
 from rest_framework.permissions import OperandHolder, SingleOperandHolder
+
+# -- Extend Swagger so that it includes the names of the permissions requireds
 
 PermissionItem = namedtuple("PermissionItem", ["name", "doc_str"])
 

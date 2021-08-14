@@ -164,6 +164,15 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         # 'rest_framework.renderers.BrowsableAPIRenderer',
     ],
+    # Throttling: these apply site-wide
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "5/second",  # applies to all requests form unauntenthicated users
+        "user": "100/min",  # applies to unauthenticated _and_ authenticated users
+    },
 }
 
 # drf-spectacular
