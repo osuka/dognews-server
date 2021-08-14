@@ -8,6 +8,9 @@ from rest_framework import generics, filters, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie, vary_on_headers
 from django_filters.rest_framework import DjangoFilterBackend
 
 from django.contrib.auth import get_user_model
@@ -292,3 +295,23 @@ class ArticleViewSet(
     queryset = Submission.objects.filter(status="accepted").order_by("-date_created")
     serializer_class = ArticleSerializer
     permission_classes = []
+
+    @method_decorator(cache_page(60 * 2))
+    @method_decorator(vary_on_cookie)
+    @method_decorator(
+        vary_on_headers(
+            "Authorization",
+        )
+    )
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().list(request, *args, **kwargs)
+
+    @method_decorator(cache_page(60 * 2))
+    @method_decorator(vary_on_cookie)
+    @method_decorator(
+        vary_on_headers(
+            "Authorization",
+        )
+    )
+    def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().retrieve(request, *args, **kwargs)
