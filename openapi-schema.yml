@@ -1670,8 +1670,7 @@ components:
         status:
           $ref: '#/components/schemas/FetchStatusEnum'
         owner:
-          type: string
-          format: uri
+          type: integer
           readOnly: true
         title:
           type: string
@@ -1731,8 +1730,7 @@ components:
         status:
           $ref: '#/components/schemas/ModerationStatusEnum'
         owner:
-          type: string
-          format: uri
+          type: integer
           readOnly: true
         title:
           type: string
@@ -1893,8 +1891,7 @@ components:
         status:
           $ref: '#/components/schemas/FetchStatusEnum'
         owner:
-          type: string
-          format: uri
+          type: integer
           readOnly: true
         title:
           type: string
@@ -1942,8 +1939,7 @@ components:
         status:
           $ref: '#/components/schemas/ModerationStatusEnum'
         owner:
-          type: string
-          format: uri
+          type: integer
           readOnly: true
         title:
           type: string
@@ -1978,9 +1974,7 @@ components:
           type: string
           readOnly: true
         owner:
-          type: string
-          format: uri
-          readOnly: true
+          $ref: '#/components/schemas/User'
         title:
           type: string
           maxLength: 120
@@ -1992,9 +1986,13 @@ components:
           format: date-time
           nullable: true
         fetch:
-          type: string
-          format: uri
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/Fetch'
+          nullable: true
+        moderation:
+          allOf:
+          - $ref: '#/components/schemas/Moderation'
+          nullable: true
     PatchedUser:
       type: object
       properties:
@@ -2038,9 +2036,7 @@ components:
           type: string
           readOnly: true
         owner:
-          type: string
-          format: uri
-          readOnly: true
+          $ref: '#/components/schemas/User'
         title:
           type: string
           maxLength: 120
@@ -2052,13 +2048,15 @@ components:
           format: date-time
           nullable: true
         fetch:
-          type: string
-          format: uri
-          readOnly: true
+          allOf:
+          - $ref: '#/components/schemas/Fetch'
+          nullable: true
+        moderation:
+          allOf:
+          - $ref: '#/components/schemas/Moderation'
+          nullable: true
       required:
-      - fetch
       - id
-      - owner
       - status
       - target_url
       - url

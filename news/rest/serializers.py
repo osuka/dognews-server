@@ -6,6 +6,7 @@ from typing import Any, List
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from rest_framework import serializers
+from rest_framework.fields import SerializerMethodField
 from rest_framework.validators import UniqueValidator
 from ..models import Fetch, Moderation, Submission, Vote
 
@@ -54,46 +55,11 @@ class GroupSerializer(serializers.ModelSerializer):
 #         read_only_fields = ["user"]
 #         exclude = []
 
-# --------------------------------------
-
-
-class SubmissionSerializer(
-    NonNullModelSerializer, serializers.HyperlinkedModelSerializer
-):
-    """A submission object that is in initial processing"""
-
-    class Meta:
-        model = Submission
-        fields = [
-            "id",
-            "url",
-            "target_url",
-            "status",
-            "owner",
-            "title",
-            "description",
-            "date",
-            "fetch",
-            # "moderation",
-        ]
-        read_only_fields = [
-            "owner",
-            "status",
-            "date_created",
-            "last_updated",
-            "last_modified_by",
-            "domain",
-            "moderation",
-            "fetch",
-        ]
-
 
 # --------------------------------------
 
 
-class ModerationSerializer(
-    NonNullModelSerializer, serializers.HyperlinkedModelSerializer
-):
+class ModerationSerializer(NonNullModelSerializer):
     """A human evaluation of a submission"""
 
     class Meta:
@@ -123,7 +89,7 @@ class ModerationSerializer(
 # --------------------------------------
 
 
-class FetchSerializer(NonNullModelSerializer, serializers.HyperlinkedModelSerializer):
+class FetchSerializer(NonNullModelSerializer):
     """The result of a bot retrieving the information"""
 
     class Meta:
@@ -165,6 +131,52 @@ class VoteSerializer(NonNullModelSerializer):
             "date_created",
             "last_updated",
         ]
+
+
+# --------------------------------------
+
+
+class SubmissionSerializer(
+    NonNullModelSerializer, serializers.HyperlinkedModelSerializer
+):
+    """A submission object that is in initial processing"""
+
+    class Meta:
+        model = Submission
+        fields = [
+            "id",
+            "url",
+            "target_url",
+            "status",
+            "owner",
+            "title",
+            "description",
+            "date",
+            "fetch",
+            "moderation",
+        ]
+        read_only_fields = [
+            "owner",
+            "status",
+            "date_created",
+            "last_updated",
+            "last_modified_by",
+            "domain",
+            "fetch",
+            "moderation",
+        ]
+
+    fetch = FetchSerializer(required=False, allow_null=True)
+    moderation = ModerationSerializer(required=False, allow_null=True)
+    owner = UserSerializer(required=False)
+    # fetch = serializers.SerializerMethodField(required=False)
+    # moderation = serializers.SerializerMethodField(required=False)
+
+    # def get_fetch(self, obj) -> int:
+    #     return obj.fetch.pk if hasattr(obj, "fetch") else None
+
+    # def get_moderation(self, obj) -> int:
+    #     return obj.moderation.pk if hasattr(obj, "moderation") else None
 
 
 # # --------------------------------------

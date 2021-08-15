@@ -164,3 +164,6 @@ fi
 
 echo "* Create passenger wsgi configuration"
 create_passenger_configuration
+
+echo "* Reset wsgi"
+ssh ${TARGET_USER}@${TARGET_HOST} "killall /home/${TARGET_USER}/dognewsserver.gatillos.com/.venv/bin/python3"

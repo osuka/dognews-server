@@ -170,7 +170,7 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "5/second",  # applies to all requests form unauntenthicated users
+        "anon": "50/second",  # applies to all requests form unauntenthicated users
         "user": "100/min",  # applies to unauthenticated _and_ authenticated users
     },
 }

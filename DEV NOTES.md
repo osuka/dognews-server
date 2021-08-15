@@ -22,8 +22,8 @@ In settings:
         "rest_framework.throttling.AnonRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "5/second",  # applies to all requests form unauntenthicated users
-        "user": "1000/day",  # applies to unauthenticated _and_ authenticated users
+        "anon": "50/second",  # applies to all requests form unauntenthicated users
+        "user": "10000/day",  # applies to unauthenticated _and_ authenticated users
     },
 ```
 
