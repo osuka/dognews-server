@@ -123,7 +123,7 @@ EOL
 check_configuration
 
 echo "* Update project source"
-rsync --progress -r --size-only --exclude __pycache__ --exclude .ropeproject custom* dog* news restapi manage.py requirements-common.txt requirements-${ENVIRONMENT}.txt "${TARGET_USER}@${TARGET_HOST}:${TARGET_FOLDER}"/
+rsync --progress -r --size-only --exclude __pycache__ --exclude .ropeproject custom* dog* news manage.py requirements-common.txt requirements-${ENVIRONMENT}.txt "${TARGET_USER}@${TARGET_HOST}:${TARGET_FOLDER}"/
 
 echo "* Check openssl"
 INSTALLED_SSL_VERSIONS=`ssh ${TARGET_USER}@${TARGET_HOST} readelf -V -W ${TARGET_FOLDER}/openssl/lib/libssl.so|grep 'Name:'|grep OPENSSL|sed 's/_/./g'`

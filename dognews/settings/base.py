@@ -123,8 +123,6 @@ TIME_ZONE = "UTC"
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = True
 
 
@@ -154,10 +152,10 @@ REST_FRAMEWORK = {
     # make default permissions to require auth
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.DjangoModelPermissions"],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.BasicAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.BasicAuthentication",  # Basic user:password
+        "rest_framework.authentication.SessionAuthentication",  # cookie
+        # "rest_framework.authentication.TokenAuthentication",  # Token XXXX (from post auth/login)
+        "rest_framework_simplejwt.authentication.JWTAuthentication",  # Bearer XXX (from post api/token/)
     ],
     # we disable the browseable API, not particularly useful
     "DEFAULT_RENDERER_CLASSES": [
@@ -180,6 +178,8 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "Dognews Server API",
     "DESCRIPTION": "Dognews Server client API",
     "VERSION": "1.0.0",
+    # https://drf-spectacular.readthedocs.io/en/latest/faq.html?highlight=imagefield#filefield-imagefield-is-not-handled-properly-in-the-schema
+    "COMPONENT_SPLIT_REQUEST": True,
     # OTHER SETTINGS
 }
 # since django 3.2 this can be customized

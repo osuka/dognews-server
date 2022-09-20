@@ -20,7 +20,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("files", nargs="+", type=str)
 
-    def handle(self, *args, **options):
+    def handle(
+        self, *args, **options
+    ):  # pylint: disable=too-many-locals, too-many-branches
 
         for name in ["markus", "soseji"]:
             models.User.objects.get_or_create(
@@ -28,7 +30,7 @@ class Command(BaseCommand):
             )
 
         for filename in options["files"]:
-            with open(filename, "r") as source:
+            with open(filename, "r", encoding="utf-8") as source:
                 # these files are a yaml document followed by '---' and a markdown body
                 yaml_source = ""
                 body_source = ""
@@ -56,7 +58,7 @@ class Command(BaseCommand):
                     )
                     continue
 
-                if models.Article.objects.filter(target_url=target_url).exists():
+                if models.Submission.objects.filter(target_url=target_url).exists():
                     self.stdout.write(
                         self.style.WARNING(f"Ignoring {filename}: url already exists")
                     )
@@ -65,7 +67,9 @@ class Command(BaseCommand):
                 # find user
                 author: str = data.get("author", "markus")
                 author_query = models.User.objects.filter(username=author)
-                thumbnail = data.get("thumbnail", "/gfx/onlydognews-logo-main.png")
+                thumbnail = data.get("thumbnail", "gfx/onlydognews-logo-main.png")
+                if thumbnail.startswith("/"):
+                    thumbnail = thumbnail[1:]
                 date_created = data.get("date")
                 if not date_created:
                     date_created = filename[0:10]
@@ -99,16 +103,41 @@ date_created={date_created}
                         )
                     )
                     continue
+
                 author_user = author_query.first()
-                article: models.Article = models.Article.objects.create(
+                article: models.Submission = models.Submission.objects.create(
+                    status=models.SubmissionStatuses.ACCEPTED,
                     target_url=target_url,
-                    moderated_submission=None,
                     title=data.get("title"),
                     description=body_source,
-                    thumbnail=thumbnail,
-                    submitter=author_user,
-                    approver=None,
+                    # thumbnail=thumbnail,
+                    date=date_created,
+                    owner=author_user,
                 )
                 article.date_created = date_created
                 article.save()
+
+                retrieval: models.Retrieval = models.Retrieval.objects.create(
+                    submission=article,
+                    status=models.RetrievalStatuses.FETCHED,
+                    title=data.get("title"),
+                    description=body_source,
+                    thumbnail_submitted=None,
+                    thumbnail_from_page=None,
+                    thumbnail_processed=thumbnail,
+                    fetched_page="",
+                )
+                retrieval.date_created = date_created
+                retrieval.save()
+
+                moderation: models.Moderation = models.Moderation.objects.create(
+                    submission=article,
+                    status=models.ModerationStatuses.ACCEPTED,
+                    title=data.get("title"),
+                    target_url=target_url,
+                    description=body_source,
+                )
+                moderation.date_created = date_created
+                moderation.save()
+
                 self.stdout.write(self.style.SUCCESS(f"Processed {filename}"))

@@ -4,6 +4,9 @@ pytest
 pytest-django
 black
 pylint-django
+mypy
+
+black
 
 # logging HTTP requests/responses 
 django-request-logging

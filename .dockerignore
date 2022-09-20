@@ -1,0 +1,9 @@
+.devcontainer
+.idea
+.pytest_cache
+.ropeproject
+.vscode
+copy-onlydognews.com
+docs
+.venv
+

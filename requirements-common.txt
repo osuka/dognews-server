@@ -1,5 +1,5 @@
-Django~=3.2
-djangorestframework~=3.12
+Django==4.1.1
+djangorestframework==3.13.1
 django-filter
 gunicorn
 
@@ -30,8 +30,18 @@ djangorestframework-simplejwt
 # check https://github.com/django-extensions/django-extensions
 django-extensions
 
+# storage backends
+django-storages
+paramiko # needed for sftp
+boto3 # for s3 backend
+
+# cockroachdb
+django-cockroachdb
+dj_database_url
+psycopg2-binary
+
 # nicer error messages
 pretty_errors
 
 # using own fork a admin_reorder since it's not updated by parent
-git+git://github.com/osuka/django-modeladmin-reorder@master
+git+https://github.com/osuka/django-modeladmin-reorder@master

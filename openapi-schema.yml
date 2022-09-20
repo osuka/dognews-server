@@ -91,6 +91,7 @@ paths:
           - ml
           - mn
           - mr
+          - ms
           - my
           - nb
           - ne
@@ -129,7 +130,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       - {}
       responses:
@@ -164,13 +164,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenObtainPair'
+              $ref: '#/components/schemas/TokenObtainPairRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TokenObtainPair'
+              $ref: '#/components/schemas/TokenObtainPairRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TokenObtainPair'
+              $ref: '#/components/schemas/TokenObtainPairRequest'
         required: true
       responses:
         '200':
@@ -191,13 +191,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenRefresh'
+              $ref: '#/components/schemas/TokenRefreshRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TokenRefresh'
+              $ref: '#/components/schemas/TokenRefreshRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TokenRefresh'
+              $ref: '#/components/schemas/TokenRefreshRequest'
         required: true
       responses:
         '200':
@@ -218,27 +218,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenVerify'
+              $ref: '#/components/schemas/TokenVerifyRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TokenVerify'
+              $ref: '#/components/schemas/TokenVerifyRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TokenVerify'
+              $ref: '#/components/schemas/TokenVerifyRequest'
         required: true
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TokenVerify'
-          description: ''
+          description: No response body
   /articles:
     get:
       operationId: articles_list
       description: |-
         Final accepted articles, read only view.
         *Public*
+
+        **Permission restrictions:**
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - name: limit
         required: false
@@ -257,7 +256,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -272,6 +270,9 @@ paths:
       description: |-
         Final accepted articles, read only view.
         *Public*
+
+        **Permission restrictions:**
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - in: path
         name: id
@@ -284,7 +285,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -293,41 +293,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Article'
           description: ''
-  /auth/login:
-    post:
-      operationId: auth_login_create
-      description: ''
-      tags:
-      - auth
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/AuthToken'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/AuthToken'
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AuthToken'
-        required: true
-      security:
-      - basicAuth: []
-      - cookieAuth: []
-      - tokenAuth: []
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthToken'
-          description: ''
-  /fetchs:
+  /fetches:
     get:
-      operationId: fetchs_list
+      operationId: fetches_list
       description: |-
-        SFetching results attached to a submission
+        Fetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
@@ -362,11 +332,10 @@ paths:
           - rej_error
           - rej_fetch
       tags:
-      - fetchs
+      - fetches
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -376,31 +345,33 @@ paths:
                 $ref: '#/components/schemas/PaginatedFetchList'
           description: ''
     post:
-      operationId: fetchs_create
+      operationId: fetches_create
       description: |-
-        SFetching results attached to a submission
+        Fetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
         + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       tags:
-      - fetchs
+      - fetches
       requestBody:
         content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Fetch'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Fetch'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Fetch'
+              $ref: '#/components/schemas/FetchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FetchRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FetchRequest'
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/FetchRequest'
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -409,11 +380,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Fetch'
           description: ''
-  /fetchs/{submission}:
+  /fetches/{submission}:
     get:
-      operationId: fetchs_retrieve
+      operationId: fetches_retrieve
       description: |-
-        SFetching results attached to a submission
+        Fetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
@@ -427,11 +398,10 @@ paths:
         description: A unique value identifying this fetch.
         required: true
       tags:
-      - fetchs
+      - fetches
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -441,9 +411,9 @@ paths:
                 $ref: '#/components/schemas/Fetch'
           description: ''
     put:
-      operationId: fetchs_update
+      operationId: fetches_update
       description: |-
-        SFetching results attached to a submission
+        Fetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
@@ -457,22 +427,24 @@ paths:
         description: A unique value identifying this fetch.
         required: true
       tags:
-      - fetchs
+      - fetches
       requestBody:
         content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Fetch'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Fetch'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Fetch'
+              $ref: '#/components/schemas/FetchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FetchRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FetchRequest'
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/FetchRequest'
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -482,9 +454,9 @@ paths:
                 $ref: '#/components/schemas/Fetch'
           description: ''
     patch:
-      operationId: fetchs_partial_update
+      operationId: fetches_partial_update
       description: |-
-        SFetching results attached to a submission
+        Fetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
@@ -498,22 +470,24 @@ paths:
         description: A unique value identifying this fetch.
         required: true
       tags:
-      - fetchs
+      - fetches
       requestBody:
         content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedFetch'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedFetch'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedFetch'
+              $ref: '#/components/schemas/PatchedFetchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFetchRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFetchRequest'
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/PatchedFetchRequest'
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -523,9 +497,9 @@ paths:
                 $ref: '#/components/schemas/Fetch'
           description: ''
     delete:
-      operationId: fetchs_destroy
+      operationId: fetches_destroy
       description: |-
-        SFetching results attached to a submission
+        Fetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
@@ -539,15 +513,76 @@ paths:
         description: A unique value identifying this fetch.
         required: true
       tags:
-      - fetchs
+      - fetches
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '204':
           description: No response body
+  /groups:
+    get:
+      operationId: groups_list
+      description: |2-
+
+
+        **Permission restrictions:**
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - groups
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGroupList'
+          description: ''
+  /groups/{id}:
+    get:
+      operationId: groups_retrieve
+      description: |2-
+
+
+        **Permission restrictions:**
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this group.
+        required: true
+      tags:
+      - groups
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: ''
   /moderations:
     get:
       operationId: moderations_list
@@ -590,7 +625,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -614,17 +648,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Moderation'
+              $ref: '#/components/schemas/ModerationRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Moderation'
+              $ref: '#/components/schemas/ModerationRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Moderation'
+              $ref: '#/components/schemas/ModerationRequest'
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -655,7 +688,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -686,17 +718,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Moderation'
+              $ref: '#/components/schemas/ModerationRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Moderation'
+              $ref: '#/components/schemas/ModerationRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Moderation'
+              $ref: '#/components/schemas/ModerationRequest'
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -727,17 +758,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedModeration'
+              $ref: '#/components/schemas/PatchedModerationRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedModeration'
+              $ref: '#/components/schemas/PatchedModerationRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedModeration'
+              $ref: '#/components/schemas/PatchedModerationRequest'
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -767,7 +797,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '204':
@@ -796,10 +825,6 @@ paths:
         schema:
           type: boolean
       - in: query
-        name: fetch__generated_thumbnail__isnull
-        schema:
-          type: boolean
-      - in: query
         name: fetch__isnull
         schema:
           type: boolean
@@ -814,10 +839,6 @@ paths:
           - rej_fetch
       - in: query
         name: fetch__status__isnull
-        schema:
-          type: boolean
-      - in: query
-        name: fetch__thumbnail__isnull
         schema:
           type: boolean
       - name: limit
@@ -870,7 +891,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -894,18 +914,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Submission'
+              $ref: '#/components/schemas/SubmissionRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Submission'
+              $ref: '#/components/schemas/SubmissionRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Submission'
+              $ref: '#/components/schemas/SubmissionRequest'
         required: true
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -936,7 +955,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -967,18 +985,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Submission'
+              $ref: '#/components/schemas/SubmissionRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Submission'
+              $ref: '#/components/schemas/SubmissionRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Submission'
+              $ref: '#/components/schemas/SubmissionRequest'
         required: true
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1009,17 +1026,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedSubmission'
+              $ref: '#/components/schemas/PatchedSubmissionRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedSubmission'
+              $ref: '#/components/schemas/PatchedSubmissionRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedSubmission'
+              $ref: '#/components/schemas/PatchedSubmissionRequest'
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1049,16 +1065,15 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '204':
           description: No response body
-  /submissions/{submission_id}/fetch:
+  /submissions/{submission_pk}/fetch:
     get:
       operationId: submissions_fetch_retrieve
       description: |-
-        SFetching results attached to a submission
+        Fetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
@@ -1066,17 +1081,16 @@ paths:
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - in: path
-        name: submission_id
+        name: submission_pk
         schema:
-          type: integer
-        description: A unique value identifying this fetch.
+          type: string
+          pattern: ^\d+$
         required: true
       tags:
       - submissions
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1088,7 +1102,7 @@ paths:
     put:
       operationId: submissions_fetch_update
       description: |-
-        SFetching results attached to a submission
+        Fetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
@@ -1096,28 +1110,30 @@ paths:
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - in: path
-        name: submission_id
+        name: submission_pk
         schema:
-          type: integer
-        description: A unique value identifying this fetch.
+          type: string
+          pattern: ^\d+$
         required: true
       tags:
       - submissions
       requestBody:
         content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Fetch'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Fetch'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Fetch'
+              $ref: '#/components/schemas/FetchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FetchRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FetchRequest'
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/FetchRequest'
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1129,7 +1145,7 @@ paths:
     delete:
       operationId: submissions_fetch_destroy
       description: |-
-        SFetching results attached to a submission
+        Fetching results attached to a submission
 
         **Permission restrictions:**
         + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
@@ -1137,22 +1153,78 @@ paths:
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - in: path
-        name: submission_id
+        name: submission_pk
         schema:
-          type: integer
-        description: A unique value identifying this fetch.
+          type: string
+          pattern: ^\d+$
         required: true
       tags:
       - submissions
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '204':
           description: No response body
-  /submissions/{submission_id}/moderation:
+  /submissions/{submission_pk}/fetch/thumbnails:
+    put:
+      operationId: submissions_fetch_thumbnails_update
+      description: |-
+        Uploading thumbnails. There are three thumbnail fields. You can upload as many as you need via a multipart/form-data request.
+
+        Image format supported: png/jpg/etc.
+        Maximum size:
+
+        ## example
+        ```
+        PUT {{submissionUrl}}/fetch/thumbnails
+        Authorization: Token {{authToken}}
+        Content-Type: multipart/form-data;boundary="WeE843erSADF32Sdsa0329r0easfd"
+
+        --WeE843erSADF32Sdsa0329r0easfd
+        Content-Disposition: form-data; name="thumbnail_from_page"; filename="test/resources/Test-Logo-Small-Black-transparent-1.png"
+        Content-type: image/png
+
+        < ./test/resources/Test-Logo-Small-Black-transparent-1.png
+        --WeE843erSADF32Sdsa0329r0easfd
+        Content-Disposition: form-data; name="thumbnail_processed"; filename="test/resources/Test-Logo-Small-Black-transparent-1.png"
+        Content-type: image/png
+
+        < ./test/resources/Test-Logo-Small-Black-transparent-1.png
+        --WeE843erSADF32Sdsa0329r0easfd
+        ```
+
+        **Permission restrictions:**
+        + `IsAuthenticated`: *Rejects all operations if the user is not authenticated*
+        + `IsOwnerOrStaff`: *Blocks update/partial_updated/destroy if:     * the user is NOT in the staff group     * AND if the model has a property called 'owner' and its value differs from the request user     Everything else is allowed*
+        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
+      parameters:
+      - in: path
+        name: submission_pk
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - submissions
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FetchThumbnailImageRequest'
+      security:
+      - basicAuth: []
+      - cookieAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FetchThumbnailImage'
+          description: ''
+  /submissions/{submission_pk}/moderation:
     get:
       operationId: submissions_moderation_retrieve
       description: |-
@@ -1164,17 +1236,16 @@ paths:
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - in: path
-        name: submission_id
+        name: submission_pk
         schema:
-          type: integer
-        description: A unique value identifying this moderation.
+          type: string
+          pattern: ^\d+$
         required: true
       tags:
       - submissions
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1194,10 +1265,10 @@ paths:
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - in: path
-        name: submission_id
+        name: submission_pk
         schema:
-          type: integer
-        description: A unique value identifying this moderation.
+          type: string
+          pattern: ^\d+$
         required: true
       tags:
       - submissions
@@ -1205,17 +1276,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Moderation'
+              $ref: '#/components/schemas/ModerationRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Moderation'
+              $ref: '#/components/schemas/ModerationRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Moderation'
+              $ref: '#/components/schemas/ModerationRequest'
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1235,22 +1305,21 @@ paths:
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - in: path
-        name: submission_id
+        name: submission_pk
         schema:
-          type: integer
-        description: A unique value identifying this moderation.
+          type: string
+          pattern: ^\d+$
         required: true
       tags:
       - submissions
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '204':
           description: No response body
-  /submissions/{submission_id}/votes:
+  /submissions/{submission_pk}/votes:
     get:
       operationId: submissions_votes_list
       description: |-
@@ -1274,16 +1343,16 @@ paths:
         schema:
           type: integer
       - in: path
-        name: submission_id
+        name: submission_pk
         schema:
-          type: integer
+          type: string
+          pattern: ^\d+$
         required: true
       tags:
       - submissions
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1303,9 +1372,10 @@ paths:
         + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
       parameters:
       - in: path
-        name: submission_id
+        name: submission_pk
         schema:
-          type: integer
+          type: string
+          pattern: ^\d+$
         required: true
       tags:
       - submissions
@@ -1313,17 +1383,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Vote'
+              $ref: '#/components/schemas/VoteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Vote'
+              $ref: '#/components/schemas/VoteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Vote'
+              $ref: '#/components/schemas/VoteRequest'
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '201':
@@ -1358,7 +1427,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1366,39 +1434,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedUserList'
-          description: ''
-    post:
-      operationId: users_create
-      description: |2-
-
-
-        **Permission restrictions:**
-        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/User'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/User'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/User'
-        required: true
-      security:
-      - basicAuth: []
-      - cookieAuth: []
-      - tokenAuth: []
-      - jwtAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
           description: ''
   /users/{id}:
     get:
@@ -1420,7 +1455,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1429,109 +1463,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: ''
-    put:
-      operationId: users_update
-      description: |2-
-
-
-        **Permission restrictions:**
-        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user.
-        required: true
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/User'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/User'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/User'
-        required: true
-      security:
-      - basicAuth: []
-      - cookieAuth: []
-      - tokenAuth: []
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-    patch:
-      operationId: users_partial_update
-      description: |2-
-
-
-        **Permission restrictions:**
-        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user.
-        required: true
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedUser'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedUser'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedUser'
-      security:
-      - basicAuth: []
-      - cookieAuth: []
-      - tokenAuth: []
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-    delete:
-      operationId: users_destroy
-      description: |2-
-
-
-        **Permission restrictions:**
-        + `DjangoModelPermissions`: *The request is authenticated using `django.contrib.auth` permissions.     See: https://docs.djangoproject.com/en/dev/topics/auth/#permissions      It ensures that the user is authenticated, and has the appropriate     `add`/`change`/`delete` permissions on the model.      This permission can only be applied against view classes that     provide a `.queryset` attribute.*
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user.
-        required: true
-      tags:
-      - users
-      security:
-      - basicAuth: []
-      - cookieAuth: []
-      - tokenAuth: []
-      - jwtAuth: []
-      responses:
-        '204':
-          description: No response body
   /votes/{id}:
     get:
       operationId: votes_retrieve
@@ -1554,7 +1485,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '200':
@@ -1584,7 +1514,6 @@ paths:
       security:
       - basicAuth: []
       - cookieAuth: []
-      - tokenAuth: []
       - jwtAuth: []
       responses:
         '204':
@@ -1643,22 +1572,6 @@ components:
       - thumbnail
       - title
       - url
-    AuthToken:
-      type: object
-      properties:
-        username:
-          type: string
-          writeOnly: true
-        password:
-          type: string
-          writeOnly: true
-        token:
-          type: string
-          readOnly: true
-      required:
-      - password
-      - token
-      - username
     Fetch:
       type: object
       description: The result of a bot retrieving the information
@@ -1682,16 +1595,8 @@ components:
           maxLength: 250
         thumbnail:
           type: string
-          nullable: true
-          maxLength: 250
-        generated_thumbnail:
-          type: string
-          nullable: true
-          maxLength: 250
-        thumbnail_image:
-          type: string
-          format: uri
-          nullable: true
+          example: https://s3.amazonaws.com/xxxx/env/name.png?xxx&yyy
+          readOnly: true
         fetched_page:
           type: string
           maxLength: 61440
@@ -1703,11 +1608,47 @@ components:
           type: string
           format: date-time
           readOnly: true
+        thumbnail_from_page:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+        thumbnail_submitted:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+        thumbnail_processed:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
       required:
       - date_created
       - last_updated
       - owner
+      - thumbnail
+      - thumbnail_from_page
+      - thumbnail_processed
+      - thumbnail_submitted
       - url
+    FetchRequest:
+      type: object
+      description: The result of a bot retrieving the information
+      properties:
+        status:
+          $ref: '#/components/schemas/FetchStatusEnum'
+        title:
+          type: string
+          nullable: true
+          maxLength: 120
+        description:
+          type: string
+          nullable: true
+          maxLength: 250
+        fetched_page:
+          type: string
+          maxLength: 61440
     FetchStatusEnum:
       enum:
       - pending
@@ -1715,6 +1656,55 @@ components:
       - rej_error
       - rej_fetch
       type: string
+    FetchThumbnailImage:
+      type: object
+      description: |-
+        The normal serializer can be used for FormUpload but for API upload
+        we enable this one that can expose only the image as separate endpoint
+      properties:
+        thumbnail_from_page:
+          type: string
+          format: uri
+          nullable: true
+        thumbnail_submitted:
+          type: string
+          format: uri
+          nullable: true
+        thumbnail_processed:
+          type: string
+          format: uri
+          nullable: true
+    FetchThumbnailImageRequest:
+      type: object
+      description: |-
+        The normal serializer can be used for FormUpload but for API upload
+        we enable this one that can expose only the image as separate endpoint
+      properties:
+        thumbnail_from_page:
+          type: string
+          format: binary
+          nullable: true
+        thumbnail_submitted:
+          type: string
+          format: binary
+          nullable: true
+        thumbnail_processed:
+          type: string
+          format: binary
+          nullable: true
+    Group:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        name:
+          type: string
+          maxLength: 150
+      required:
+      - name
+      - url
     Moderation:
       type: object
       description: A human evaluation of a submission
@@ -1727,6 +1717,7 @@ components:
           type: string
           format: uri
           readOnly: true
+          nullable: true
         status:
           $ref: '#/components/schemas/ModerationStatusEnum'
         owner:
@@ -1735,9 +1726,11 @@ components:
         title:
           type: string
           readOnly: true
+          nullable: true
         description:
           type: string
           readOnly: true
+          nullable: true
         last_updated:
           type: string
           format: date-time
@@ -1754,6 +1747,12 @@ components:
       - target_url
       - title
       - url
+    ModerationRequest:
+      type: object
+      description: A human evaluation of a submission
+      properties:
+        status:
+          $ref: '#/components/schemas/ModerationStatusEnum'
     ModerationStatusEnum:
       enum:
       - pending
@@ -1800,6 +1799,26 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Fetch'
+    PaginatedGroupList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Group'
     PaginatedModerationList:
       type: object
       properties:
@@ -1880,19 +1899,12 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Vote'
-    PatchedFetch:
+    PatchedFetchRequest:
       type: object
       description: The result of a bot retrieving the information
       properties:
-        url:
-          type: string
-          format: uri
-          readOnly: true
         status:
           $ref: '#/components/schemas/FetchStatusEnum'
-        owner:
-          type: integer
-          readOnly: true
         title:
           type: string
           nullable: true
@@ -1901,80 +1913,24 @@ components:
           type: string
           nullable: true
           maxLength: 250
-        thumbnail:
-          type: string
-          nullable: true
-          maxLength: 250
-        generated_thumbnail:
-          type: string
-          nullable: true
-          maxLength: 250
-        thumbnail_image:
-          type: string
-          format: uri
-          nullable: true
         fetched_page:
           type: string
           maxLength: 61440
-        last_updated:
-          type: string
-          format: date-time
-          readOnly: true
-        date_created:
-          type: string
-          format: date-time
-          readOnly: true
-    PatchedModeration:
+    PatchedModerationRequest:
       type: object
       description: A human evaluation of a submission
       properties:
-        url:
-          type: string
-          format: uri
-          readOnly: true
-        target_url:
-          type: string
-          format: uri
-          readOnly: true
         status:
           $ref: '#/components/schemas/ModerationStatusEnum'
-        owner:
-          type: integer
-          readOnly: true
-        title:
-          type: string
-          readOnly: true
-        description:
-          type: string
-          readOnly: true
-        last_updated:
-          type: string
-          format: date-time
-          readOnly: true
-        date_created:
-          type: string
-          format: date-time
-          readOnly: true
-    PatchedSubmission:
+    PatchedSubmissionRequest:
       type: object
       description: A submission object that is in initial processing
       properties:
-        id:
-          type: integer
-          readOnly: true
-        url:
-          type: string
-          format: uri
-          readOnly: true
         target_url:
           type: string
           format: uri
+          minLength: 1
           maxLength: 200
-        status:
-          type: string
-          readOnly: true
-        owner:
-          $ref: '#/components/schemas/User'
         title:
           type: string
           maxLength: 120
@@ -1987,36 +1943,17 @@ components:
           nullable: true
         fetch:
           allOf:
-          - $ref: '#/components/schemas/Fetch'
+          - $ref: '#/components/schemas/FetchRequest'
           nullable: true
         moderation:
           allOf:
-          - $ref: '#/components/schemas/Moderation'
+          - $ref: '#/components/schemas/ModerationRequest'
           nullable: true
-    PatchedUser:
-      type: object
-      properties:
-        url:
-          type: string
-          format: uri
-          readOnly: true
-        username:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
-        email:
-          type: string
-          format: email
-          title: Email address
-          maxLength: 254
-        groups:
+        votes:
           type: array
           items:
-            type: integer
-          description: The groups this user belongs to. A user will get all permissions
-            granted to each of their groups.
+            $ref: '#/components/schemas/VoteRequest'
+          nullable: true
     Submission:
       type: object
       description: A submission object that is in initial processing
@@ -2036,7 +1973,9 @@ components:
           type: string
           readOnly: true
         owner:
-          $ref: '#/components/schemas/User'
+          type: string
+          format: uri
+          readOnly: true
         title:
           type: string
           maxLength: 120
@@ -2055,20 +1994,54 @@ components:
           allOf:
           - $ref: '#/components/schemas/Moderation'
           nullable: true
+        votes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vote'
+          nullable: true
       required:
       - id
+      - owner
       - status
       - target_url
       - url
+    SubmissionRequest:
+      type: object
+      description: A submission object that is in initial processing
+      properties:
+        target_url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        title:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 250
+        date:
+          type: string
+          format: date-time
+          nullable: true
+        fetch:
+          allOf:
+          - $ref: '#/components/schemas/FetchRequest'
+          nullable: true
+        moderation:
+          allOf:
+          - $ref: '#/components/schemas/ModerationRequest'
+          nullable: true
+        votes:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoteRequest'
+          nullable: true
+      required:
+      - target_url
     TokenObtainPair:
       type: object
       properties:
-        username:
-          type: string
-          writeOnly: true
-        password:
-          type: string
-          writeOnly: true
         access:
           type: string
           readOnly: true
@@ -2077,8 +2050,20 @@ components:
           readOnly: true
       required:
       - access
-      - password
       - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
       - username
     TokenRefresh:
       type: object
@@ -2086,45 +2071,43 @@ components:
         access:
           type: string
           readOnly: true
+      required:
+      - access
+    TokenRefreshRequest:
+      type: object
+      properties:
         refresh:
           type: string
           writeOnly: true
+          minLength: 1
       required:
-      - access
       - refresh
-    TokenVerify:
+    TokenVerifyRequest:
       type: object
       properties:
         token:
           type: string
+          writeOnly: true
+          minLength: 1
       required:
       - token
     User:
       type: object
       properties:
-        url:
-          type: string
-          format: uri
+        id:
+          type: integer
           readOnly: true
         username:
           type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
-        email:
-          type: string
-          format: email
-          title: Email address
-          maxLength: 254
+          readOnly: true
         groups:
           type: array
           items:
-            type: integer
-          description: The groups this user belongs to. A user will get all permissions
-            granted to each of their groups.
+            type: string
+          readOnly: true
       required:
-      - url
+      - groups
+      - id
       - username
     ValueEnum:
       enum:
@@ -2138,31 +2121,22 @@ components:
         Votes are provided in Lists and don't link back to their
         submissions once serialized
       properties:
-        id:
-          type: integer
-          readOnly: true
         value:
-          $ref: '#/components/schemas/ValueEnum'
-        last_updated:
-          type: string
-          format: date-time
-          readOnly: true
-        date_created:
-          type: string
-          format: date-time
-          readOnly: true
-        submission:
-          type: integer
-          readOnly: true
-        owner:
-          type: integer
-          readOnly: true
-      required:
-      - date_created
-      - id
-      - last_updated
-      - owner
-      - submission
+          allOf:
+          - $ref: '#/components/schemas/ValueEnum'
+          minimum: -32768
+          maximum: 32767
+    VoteRequest:
+      type: object
+      description: |-
+        Votes are provided in Lists and don't link back to their
+        submissions once serialized
+      properties:
+        value:
+          allOf:
+          - $ref: '#/components/schemas/ValueEnum'
+          minimum: -32768
+          maximum: 32767
   securitySchemes:
     basicAuth:
       type: http
@@ -2170,13 +2144,8 @@ components:
     cookieAuth:
       type: apiKey
       in: cookie
-      name: Session
+      name: sessionid
     jwtAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-    tokenAuth:
-      type: apiKey
-      in: header
-      name: Authorization
-      description: Token-based authentication with required prefix "Token"

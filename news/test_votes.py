@@ -1,11 +1,8 @@
 """ Test cases for Submission models """
 from test.common import ro_for, rw_for
 from django.db.utils import IntegrityError
-from django.contrib.auth.models import Group
 from django.test import TestCase
-from rest_framework import status
-from rest_framework.test import APITestCase
-from .models import Moderation, Submission, Vote
+from .models import Submission, Vote
 from .test_submissions import sample_submission
 
 # pylint: disable=missing-function-docstring

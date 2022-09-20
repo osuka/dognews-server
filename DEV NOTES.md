@@ -5,6 +5,90 @@
 
 ---
 
+## 2022-09-04 Cockroach db
+
+Registered in cockroach db
+
+Created a free tier db. Created a user in there, called `onlydognews-prod`. The wizard ends up showing steps to download certificate and configure django (among others)
+
+```sh
+# install client
+curl https://binaries.cockroachdb.com/cockroach-v22.1.6.linux-amd64.tgz | tar -xz && sudo cp -i cockroach-v22.1.6.linux-amd64/cockroach /usr/local/bin/
+```
+
+```sh
+curl --create-dirs -o $HOME/.postgresql/root.crt -O https://cockroachlabs.cloud/clusters/XXXXXXXXXXXXXXXXXXXXXXXXX/cert
+```
+
+```sh
+export DATABASE_URL="postgresql://PRODUSER:PASSWORD@free-tier14.aws-us-east-1.cockroachlabs.cloud:99999/myenv_prod?sslmode=verify-full&options=--cluster%3Dcluster-id-xxxx"
+
+# or
+
+export DATABASE_URL="postgresql://DEVUSER:PASSWORD@free-tier14.aws-us-east-1.cockroachlabs.cloud:99999/myenv_dev?sslmode=verify-full&options=--cluster%3Dcluster-id-xxxx"
+
+# to connect using a client
+docker run --rm -it cockroachdb/cockroach:v22.1.6 sql --url "${DATABASE_URL}"
+```
+
+```python
+## settings.py
+import os
+import dj_database_url
+DATABASES = {'default': dj_database_url.config(default=os.environ['DATABASE_URL'], engine='django_cockroachdb')}
+```
+
+Other operations work the same, eg to create admin
+
+```sh
+source ./config.local.sh
+DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py createsuperuser --email ${SUPERUSER_EMAIL} --username ${SUPERUSER_NAME}
+```
+
+or to launch the server locally
+
+```sh
+source ./config.local.sh
+DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py runserver
+```
+
+## 2022-09-04 Storages
+
+Added django-storages
+
+Created a bucket, IAM policy, added in settings:
+
+```python
+# to use s3: settings in https://github.com/jschneier/django-storages/blob/master/docs/backends/amazon-S3.rst
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+# To allow django-admin collectstatic to automatically put your static files in your bucket
+STATICFILES_STORAGE = "storages.backends.s3boto3.S3StaticStorage"
+# if we use https://docs.djangoproject.com/en/3.1/ref/contrib/staticfiles/#manifeststaticfilesstorage
+# STATICFILES_STORAGE = "storages.backends.s3boto3.S3ManifestStaticStorage"
+# credentials are provided per environment (AWS instance profile, aws env var etc)
+AWS_S3_SESSION_PROFILE = os.environ.get("AWS_PROFILE", "onlydognews-local-server")
+AWS_LOCATION = "local"  # prefix
+AWS_STORAGE_BUCKET_NAME = "onlydognews.com"
+```
+
+For sftp
+
+```python
+# to use sftp: settings in https://github.com/jschneier/django-storages/blob/master/docs/backends/sftp.rst
+DEFAULT_FILE_STORAGE = "storages.backends.sftpstorage.SFTPStorage"
+SFTP_STORAGE_HOST = "minion"
+SFTP_STORAGE_ROOT = "/tmp/dognewsphotos"
+SFTP_STORAGE_PARAMS = {"username": "MYUSER"}
+SFTP_STORAGE_INTERACTIVE = False
+SFTP_STORAGE_FILE_MODE = (
+    0o664  # or stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+)
+# SFTP_STORAGE_UID =
+# SFTP_STORAGE_GID =
+# SFTP_KNOWN_HOST_FILE =
+```
+
+
 ## 2021-08-14 Throttling login attempts
 
 There's a few ways to attempt a login: via REST and via Django itself.
@@ -127,7 +211,7 @@ urlpatterns = [
 
 Now we have:
 
-- http://localhost:8000/schema to retrieve the openapi.yml schema
+- http://localhost:8000/api/schema to retrieve the openapi.yml schema
 - http://localhost:8000/api/schema/swagger-ui/ to browse using the Swagger UI
 - We could have also redoc but I've disabled it since Swagger seems nicer and allows requests froms the UI in a very intuitive way.
 
@@ -266,7 +350,8 @@ You can exclude models and columns (see [the documentation](https://django-exten
 There are a few ways to go about this. One thing we can do is manually generate an OpenAPI Schema representation. This is a yaml document expressing all the exposed methods that we have
 
 ```sh
-python manage.py generateschema > openapi-schema.yml
+source ./config.local.sh
+DJANGO_SETTINGS_MODULE=dognews.settings.local python manage.py spectacular > openapi-schema.yml
 ```
 
 > A lot can be tweaked here, check [docs](https://www.django-rest-framework.org/api-guide/schemas/)
@@ -860,10 +945,10 @@ About the `api-auth/` URLs there, they are suggested by the DRF tutorial:
 
 ## 2019.11.04 Initial project creation
 
-> Check [virtualenv](https://virtualenv.pypa.io/en/stable/) for more. Check [django](https://docs.djangoproject.com/en/3.0/) for more.
+> Check [python3 venv](https://docs.python.org/3/library/venv.html) for more. Check [django](https://docs.djangoproject.com/en/3.0/) for more.
 
 ```sh
-virtualenv -p python3.8 .venv
+python3 -m venv .venv
 source .venv/bin/activate
 echo 'Django>=3' >>requirements.txt
 pip install -r requirements.txt

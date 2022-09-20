@@ -32,13 +32,14 @@ from rest_framework_simplejwt.views import (
 
 # from django.contrib.auth.models import Group, Permission
 from news.rest.views import (
+    GroupViewSet,
     SubmissionViewSet,
     ModerationViewSet,
-    FetchViewSet,
+    RetrievalViewSet,
     SubmissionVoteViewSet,
     UserViewSet,
-    VoteViewSet,
     ArticleViewSet,
+    RetrievalThumbnailUploadView,
 )
 
 urlpatterns = []
@@ -46,14 +47,8 @@ urlpatterns = []
 # this is a router that can help with nested view lookups byt concatenating
 # calls to 'register' for sub paths.
 # it adds parameters with a prefix of 'parent_lookup_' to self.kwargs
-
-# Here we define newsItem and /newsItem/ID/ratings
 router = SimpleRouter(trailing_slash=False)
 router.register(r"submissions", SubmissionViewSet)
-router.register(r"moderations", ModerationViewSet)
-router.register(r"fetchs", FetchViewSet)
-# router.register(r"moderatedsubmissions", ModeratedSubmissionViewSet)
-router.register(r"votes", VoteViewSet)
 
 # .list(), .retrieve(), .create(), .update(), .partial_update(), and .destroy().
 urlpatterns += [
@@ -65,7 +60,14 @@ urlpatterns += [
     ),
     re_path(
         r"^submissions/(?P<submission_pk>\d+)/fetch$",
-        FetchViewSet.as_view({"get": "retrieve", "put": "update", "delete": "destroy"}),
+        RetrievalViewSet.as_view(
+            {"get": "retrieve", "put": "update", "delete": "destroy"}
+        ),
+    ),
+    re_path(
+        # r"^submissions/(?P<submission_pk>\d+)/fetch/(?P<thumbnail_field>(thumbnail_from_page|thumbnail_submitted|thumbnail_processed))$",
+        r"^submissions/(?P<submission_pk>\d+)/fetch/thumbnails$",
+        RetrievalThumbnailUploadView.as_view(),
     ),
     re_path(
         r"^submissions/(?P<submission_pk>\d+)/votes$",
@@ -73,10 +75,10 @@ urlpatterns += [
     ),
 ]
 
-router.register(r"articles", ArticleViewSet)
+router.register(r"articles", ArticleViewSet, basename="articles")
 
 router.register(r"users", UserViewSet)
-# router.register(r'groups', GroupViewSet)
+router.register(r"groups", GroupViewSet)
 
 urlpatterns += [
     path("adminpanel/", admin.site.urls),
@@ -109,7 +111,9 @@ urlpatterns += [
 # note: we can also do
 #   ./manage.py drf_create_token <username>       (creates or retrieves)
 #   ./manage.py drf_create_token -r <username>      (regenerates)
-urlpatterns += [re_path(r"^auth/login", authviews.obtain_auth_token)]
+
+# disable this and force using tokens that have a refreshing functionality
+# urlpatterns += [re_path(r"^auth/login", authviews.obtain_auth_token)]
 
 # For JWT Token authentication (remember this is a playground for me, there's not really a lot of need for JWT here!)
 urlpatterns += [

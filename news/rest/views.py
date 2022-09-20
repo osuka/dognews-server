@@ -3,34 +3,53 @@ Exposed API for handling news, publicly published, restricted
 by auth
 """
 from typing import Any
-from rest_framework import views, viewsets, permissions, mixins
-from rest_framework import generics, filters, status
-from rest_framework.request import Request
-from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
+
+from PIL import Image
+
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.http.response import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_cookie, vary_on_headers
 from django_filters.rest_framework import DjangoFilterBackend
-
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from dogauth.permissions import (
     IsAuthenticated,
-    IsOwnerOrStaff,
-    IsModeratorOrStaff,
     IsOwnerOrModeratorOrStaff,
+    IsOwnerOrStaff,
 )
+from rest_framework import (
+    filters,
+    mixins,
+    permissions,
+    viewsets,
+    views,
+    parsers,
+    status,
+)
+from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.generics import GenericAPIView
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_field,
+    extend_schema_serializer,
+    OpenApiParameter,
+)
+from drf_spectacular.types import OpenApiTypes
+
+from ..models import User, Retrieval, Moderation, Submission, Vote
 from .serializers import (
     ArticleSerializer,
+    RetrievalSerializer,
+    RetrievalThumbnailImageSerializer,
+    GroupSerializer,
     ModerationSerializer,
     SubmissionSerializer,
-    FetchSerializer,
-    VoteSerializer,
     UserSerializer,
-    GroupSerializer,
+    VoteSerializer,
 )
-from ..models import Fetch, Moderation, Submission, Vote
 
 # pylint: disable=missing-class-docstring
 
@@ -38,13 +57,17 @@ from ..models import Fetch, Moderation, Submission, Vote
 # --------------------------
 
 
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = get_user_model().objects.all().order_by("-date_joined")
+class UserViewSet(
+    mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
+):
+    queryset = get_user_model().objects.filter(is_staff=True).order_by("-date_joined")
     serializer_class = UserSerializer
 
 
-class GroupViewSet(viewsets.ModelViewSet):
-    queryset = Group.objects.all()
+class GroupViewSet(
+    mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
+):
+    queryset = Group.objects.filter(name__startswith="news_")
     serializer_class = GroupSerializer
 
 
@@ -89,11 +112,9 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         "status": ["exact"],
         "moderation": ["isnull"],
         "moderation__status": ["exact", "isnull"],
-        "fetch": ["isnull"],
-        "fetch__status": ["exact", "isnull"],
+        "retrieval": ["isnull"],
+        "retrieval__status": ["exact", "isnull"],
         "analysis__status": ["exact", "isnull"],
-        "fetch__generated_thumbnail": ["isnull"],
-        "fetch__thumbnail": ["isnull"],
     }
 
     def perform_create(self, serializer):
@@ -157,52 +178,117 @@ class ModerationViewSet(viewsets.ModelViewSet):
         return super().get_object()
 
 
-class FetchViewSet(viewsets.ModelViewSet):
+class RetrievalViewSet(viewsets.ModelViewSet):
     """
-    SFetching results attached to a submission
+    Retrieve results attached to a submission
     """
 
+    parser_classes = [
+        parsers.MultiPartParser,
+        parsers.FormParser,
+        parsers.JSONParser,
+        parsers.FileUploadParser,
+    ]
     permission_classes = [
         IsAuthenticated,
         IsOwnerOrStaff,
         permissions.DjangoModelPermissions,
     ]
 
-    queryset = Fetch.objects.all()
-    serializer_class = FetchSerializer
+    queryset = Retrieval.objects.all()
+    serializer_class = RetrievalSerializer
     filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
     ordering_fields = ["date_created"]
     filterset_fields = ["status"]
+    # parser_classes = (MultiPartParser, FormParser)
 
     def get_object(self):
         if "pk" not in self.kwargs:
             sub_id = self.kwargs["submission_pk"]
             submission = Submission.objects.get(id=sub_id)
-            if hasattr(submission, "fetch"):
+            if hasattr(submission, "retrieval"):
                 # since these are bots, we allow override
-                pk = getattr(submission, "fetch").pk
+                pk = getattr(submission, "retrieval").pk
             else:
-                submission.fetch = Fetch(owner=self.request.user, submission=submission)
-                submission.fetch.save()
-                pk = submission.fetch.pk
+                submission.retrieval = Retrieval(
+                    owner=self.request.user, submission=submission
+                )
+                submission.retrieval.save()
+                pk = submission.retrieval.pk
             self.kwargs["pk"] = pk
         return super().get_object()
 
 
-class VoteViewSet(
-    mixins.RetrieveModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet
-):
+# special case: file uploads for thumbnails
+
+
+class RetrievalThumbnailUploadView(GenericAPIView):
     """
-    Vote management, through /votes (put, patch, destroy) or through
+    Uploading thumbnails. There are three thumbnail fields. You can upload as many as you need via a multipart/form-data request.
+
+    Image format supported: png/jpg/etc.
+    Maximum size:
+
+    ## example
+    ```
+    PUT {{submissionUrl}}/fetch/thumbnails
+    Authorization: Token {{authToken}}
+    Content-Type: multipart/form-data;boundary="WeE843erSADF32Sdsa0329r0easfd"
+
+    --WeE843erSADF32Sdsa0329r0easfd
+    Content-Disposition: form-data; name="thumbnail_from_page"; filename="test/resources/Test-Logo-Small-Black-transparent-1.png"
+    Content-type: image/png
+
+    < ./test/resources/Test-Logo-Small-Black-transparent-1.png
+    --WeE843erSADF32Sdsa0329r0easfd
+    Content-Disposition: form-data; name="thumbnail_processed"; filename="test/resources/Test-Logo-Small-Black-transparent-1.png"
+    Content-type: image/png
+
+    < ./test/resources/Test-Logo-Small-Black-transparent-1.png
+    --WeE843erSADF32Sdsa0329r0easfd
+    ```
     """
 
-    queryset = Vote.objects.all().select_related("submission").order_by("-date_created")
-    serializer_class = VoteSerializer
+    parser_classes = [parsers.MultiPartParser]
     permission_classes = [
         IsAuthenticated,
-        IsOwnerOrModeratorOrStaff,
+        IsOwnerOrStaff,
         permissions.DjangoModelPermissions,
     ]
+    queryset = Retrieval.objects.all()
+    serializer_class = RetrievalThumbnailImageSerializer
+
+    def get_object(self) -> Retrieval:
+        if "pk" not in self.kwargs:
+            sub_id = self.kwargs["submission_pk"]
+            submission = Submission.objects.get(id=sub_id)
+            if hasattr(submission, "retrieval"):
+                # since these are bots, we allow override
+                pk = getattr(submission, "retrieval").pk
+            else:
+                submission.retrieval = Retrieval(
+                    owner=self.request.user, submission=submission
+                )
+                submission.retrieval.save()
+                pk = submission.retrieval.pk
+            self.kwargs["pk"] = pk
+        return super().get_object()
+
+    def put(self, request, submission_pk=None, thumbnail_field=None, format=None):
+
+        retrieval: Retrieval = self.get_object()
+
+        # ref https://learnbatta.com/blog/parsers-in-django-rest-framework-85/
+
+        # img = Image.open(request.data["file"])
+        # request.data[thumbnail_field] = request.data["file"]
+        serializer = RetrievalThumbnailImageSerializer(
+            data=request.data, instance=retrieval
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SubmissionVoteViewSet(
@@ -244,9 +330,9 @@ class ArticleViewSet(
     *Public*
     """
 
-    queryset = Submission.objects.filter(status="accepted").order_by("-date_created")
     serializer_class = ArticleSerializer
-    permission_classes = []
+
+    queryset = Submission.objects.filter(status="accepted").order_by("-date_created")
 
     @method_decorator(cache_page(60 * 2))
     @method_decorator(vary_on_cookie)

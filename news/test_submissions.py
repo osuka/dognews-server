@@ -1,16 +1,16 @@
 """ Test cases for Submission models """
 from test.common import ro_for, rw_for
-from django.core.exceptions import ValidationError
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
 from .models import (
-    Fetch,
-    FetchStatuses,
+    Retrieval,
+    RetrievalStatuses,
     ModerationStatuses,
     Submission,
     Moderation,
     SubmissionStatuses,
+    Vote,
 )
 
 sample_submission = {
@@ -65,15 +65,15 @@ class SubmissionModelTests(TestCase):
         submission.save()
         self.assertEqual(submission.status, SubmissionStatuses.PENDING)
 
-        fetching = Fetch(submission=submission, status=FetchStatuses.FETCHED)
+        fetching = Retrieval(submission=submission, status=RetrievalStatuses.FETCHED)
         fetching.save()
         self.assertEqual(submission.status, SubmissionStatuses.PENDING)
 
-        fetching.status = FetchStatuses.REJECTED_BANNED
+        fetching.status = RetrievalStatuses.REJECTED_BANNED
         fetching.save()
         self.assertEqual(submission.status, SubmissionStatuses.REJECTED_BANNED)
 
-        fetching.status = FetchStatuses.REJECTED_ERROR
+        fetching.status = RetrievalStatuses.REJECTED_ERROR
         fetching.save()
         self.assertEqual(submission.status, SubmissionStatuses.REJECTED_FETCH)
 
@@ -87,11 +87,11 @@ class SubmissionAPITests(APITestCase):
     """
 
     def setUp(self):
-        self.rw_user = rw_for([Submission], "user1")
-        self.rw_user2 = rw_for([Submission], "user2")
-        self.ro_user = ro_for([Submission], "user_ro")
-        self.rw_mod = rw_for([Submission, Moderation], "mod1")
-        self.rw_mod2 = rw_for([Submission, Moderation], "mod2")
+        self.rw_user = rw_for([Submission, Vote], "user1")
+        self.rw_user2 = rw_for([Submission, Vote], "user2")
+        self.ro_user = ro_for([Submission, Vote], "user_ro")
+        self.rw_mod = rw_for([Submission, Vote, Moderation], "mod1")
+        self.rw_mod2 = rw_for([Submission, Vote, Moderation], "mod2")
 
     def as_user(self, user):
         """Peform remaining operations as a user that has the permission required"""
@@ -293,7 +293,7 @@ class SubmissionAPITests(APITestCase):
         # rw fields are accepted but ignored by the serializer
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertEqual(Submission.objects.count(), 1)
-        self.assertEqual(Submission.objects.get().target_url, "https://google.com")
+        self.assertEqual(Submission.objects.get().owner, self.rw_user)
 
         itemurl = response.data["url"]
         response = self.client.get(f"{itemurl}", format="json")
@@ -308,12 +308,101 @@ class SubmissionAPITests(APITestCase):
         response = self.client.post("/submissions", sample_submission, format="json")
         itemurl = response.data["url"]
         # item = Submission.objects.get(target_url=sample_submission["target_url"])
+
+        # logged in = alllow
+        protected = ["/submissions", f"{itemurl}"]
+        for url in protected:
+            response = self.client.get(url)
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_200_OK,
+                f"Should be able to access {url}",
+            )
+
+        # logged out = disallow
         self.client.logout()
-        forbidden = ["/submissions", f"{itemurl}"]
-        for url in forbidden:
+        protected = ["/submissions", f"{itemurl}"]
+        for url in protected:
             response = self.client.get(url)
             self.assertEqual(
                 response.status_code,
                 status.HTTP_401_UNAUTHORIZED,
                 f"Should not be able to access {url}",
             )
+
+    def test_can_vote_on_submission(self):
+        """A registered user can send a vote and update with POST/PATCH
+        POST /submissions/<id>/votes   --> id
+        PATCH /submissions/<id>/votes
+        GET /submissions/<id>/votes
+        """
+        self.as_user(self.rw_user)
+        response = self.client.post("/submissions", sample_submission)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+
+        itemurl = response.data["url"]
+
+        response = self.client.post(
+            f"{itemurl}/votes",
+            {"value": Vote.Values.UP},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        sub = Submission.objects.first()
+        self.assertEqual(sub.votes.count(), 1)
+        self.assertEqual(sub.votes.first().owner, self.rw_user)
+        self.assertEqual(sub.votes.first().value, Vote.Values.UP)
+
+        # vote again = change vote
+        response = self.client.post(
+            f"{itemurl}/votes",
+            {"value": Vote.Values.DOWN},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        sub = Submission.objects.first()
+        self.assertEqual(sub.votes.count(), 1)
+        self.assertEqual(sub.votes.first().owner, self.rw_user)
+        self.assertEqual(sub.votes.first().value, Vote.Values.DOWN)
+
+        # vote as a different user = now there's two votes
+        self.as_user(self.rw_user2)
+        response = self.client.post(
+            f"{itemurl}/votes",
+            {"value": Vote.Values.FLAG},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        sub = Submission.objects.first()
+        self.assertEqual(sub.votes.count(), 2)
+        self.assertEqual(
+            [x.owner for x in sub.votes.all()], [self.rw_user, self.rw_user2]
+        )
+        self.assertEqual(
+            [x.value for x in sub.votes.all()], [Vote.Values.DOWN, Vote.Values.FLAG]
+        )
+
+        # retrieving the submission cases: user is not moderator and submission is not theirs, nothing returned
+        self.as_user(self.rw_user2)
+        response = self.client.get(itemurl, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
+
+        # retrieving the submission cases: user is not moderator and submission is theirs, returned, 2 votes
+        self.as_user(self.rw_user)
+        response = self.client.get(itemurl, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(
+            response.data["votes"],
+            [{"value": Vote.Values.DOWN}, {"value": Vote.Values.FLAG}],
+        )
+
+        # retrieving the submission cases: user is a moderator and submission is not theirs, returned, 2 votes
+        # with extra parameters that only mods see
+        self.as_user(self.rw_mod)
+        response = self.client.get(itemurl, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(
+            response.data["votes"],
+            [{"value": Vote.Values.DOWN}, {"value": Vote.Values.FLAG}],
+        )

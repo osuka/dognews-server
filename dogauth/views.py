@@ -1,3 +1,6 @@
+"""
+API Views
+"""
 from typing import List, Optional
 
 from collections import namedtuple
@@ -63,5 +66,5 @@ class SwaggerAutoSchema(AutoSchema):
             return "\n\n**Permission restrictions:**\n" + "\n".join(
                 _render_permission_item(item) for item in permission_items
             )
-        else:
-            return None
+
+        return None

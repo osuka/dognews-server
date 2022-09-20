@@ -12,14 +12,19 @@ http# NOTE:
 
 ###
 
-@server=127.0.0.1:8000
-@user=non_staff_user
-@passwd=xxxxxxxx
+@server=http://127.0.0.1:8000
+
+###
+
+GET {{server}}/users
+Authorization: Basic SOMEUSER:SOMEPASS
 
 ###
 
 # @name login
-POST http://{{server}}/auth/login/
+# @prompt user
+# @prompt passwd
+POST {{server}}/api/token/
 content-type: application/json
 
 {
@@ -29,78 +34,185 @@ content-type: application/json
 
 ###
 
-@authToken = {{login.response.body.token}}
+# JWT authentication
+@accessToken = {{login.response.body.access}}
+@refreshToken = {{login.response.body.refresh}}
 
 ###
 
-GET http://{{server}}/newsItem
-content-type: application/json
-Authorization: Basic {{user}} {{passwd}}
+# @name submission
+# Create a submission - this is done by parsing sources of articles
+# it can include a title and a description, or else they will be fetched from the contents
 
-###
-
-POST http://{{server}}/newsItem
+POST {{server}}/submissions
 content-type: application/json
-Authorization: Basic {{user}} {{passwd}}
+Authorization: Bearer {{accessToken}}
 
 {
-  "target_url": "https://google.com",
-  "title": "this is a title",
-  "source": "examples.http",
+  "target_url": "https://www.itv.com/news/calendar/2022-09-16/dog-heard-crying-after-being-left-tied-to-tree-finds-loving-new-home",
+  "date": "2022-09-17T17:09:58.418Z"
+}
+
+### the response contains the id
+
+@submissionId = {{submission.response.body.id}} # bizarro world: this id is not the same as in url
+@submissionUrl = {{submission.response.body.url}}
+
+###
+
+DELETE http://127.0.0.1:8000/submissions/797457564071886849
+Authorization: Bearer {{accessToken}}
+
+###
+
+GET {{server}}/submissions
+Authorization: Bearer {{accessToken}}
+
+###
+
+GET {{submissionUrl}}
+Authorization: Bearer {{accessToken}}
+
+###
+
+# ------------- A submission has been created
+
+# Now its contents is extracted and then saved as the 'fetch' subobject
+
+###
+
+PUT {{submissionUrl}}/fetch
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "status": "rej_error"
 }
 
 ###
 
-# same but using token authentication
-POST http://{{server}}/newsItem
+PUT {{submissionUrl}}/fetch
 content-type: application/json
-Authorization: Token {{authToken}}
+Authorization: Bearer {{accessToken}}
 
 {
-  "target_url": "https://google.com/?q=test1",
-  "title": "this is a title",
-  "source": "examples.http",
+  "status": "rej_error",
+  "description": "An exception occured"
 }
 
 ###
 
-GET http://{{server}}/newsItem/1/ratings
+PUT {{submissionUrl}}/fetch
 content-type: application/json
-Authorization: Basic {{user}} {{passwd}}
+Authorization: Bearer {{accessToken}}
 
+{
+  "status": "rej_fetch",
+  "description": "Could not be fetched"
+}
 
 ###
 
-POST http://{{server}}/newsItem/1/ratings
+PUT {{submissionUrl}}/fetch
 content-type: application/json
-Authorization: Basic {{user}} {{passwd}}
+Authorization: Bearer {{accessToken}}
 
 {
-  "rating": -1
+  "status": "fetched",
+   "title": "I Am The Title Of This Article",
+  "description": "Article about dogs that says blah blah"
+}
+
+###
+
+PUT {{submissionUrl}}/fetch
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "status": "fetched",
+   "title": "I Am The Title Of This Article",
+  "description": "Article about dogs that says blah blah",
+  "thumbnail_from_page": "this_should_not_work"
 }
 
 
 ###
 
-PATCH http://{{server}}/newsItem/1/ratings/1
+PUT {{submissionUrl}}/fetch
 content-type: application/json
-Authorization: Basic {{user}} {{passwd}}
+Authorization: Bearer {{accessToken}}
 
 {
-  "rating": 0
+  "status": "fetched",
+   "title": "I Am The Title Of This Article",
+  "description": "Article about dogs that says blah blah",
+  "thumbnail_processed": "this_should_not_work"
 }
-
 
 ###
 
-# will replace previous rating
-POST http://{{server}}/newsItem/1/ratings
+PUT {{submissionUrl}}/fetch
 content-type: application/json
-Authorization: Basic {{user}} {{passwd}}
+Authorization: Bearer {{accessToken}}
 
 {
-  "rating": 1
+  "status": "fetched",
+  "title": "I Am The Title Of This Article",
+  "description": "Article about dogs that says blah blah",
+  "thumbnail_submitted": "this_should_not_work"
 }
 
+###
+
+GET {{submissionUrl}}/fetch
+Authorization: Bearer {{accessToken}}
 
 ###
+
+# this uses a django rest framework MultiFormParser with fileupload parser and application json parser
+PUT {{submissionUrl}}/fetch/thumbnails
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data;boundary="WeE843erSADF32Sdsa0329r0easfd"
+
+--WeE843erSADF32Sdsa0329r0easfd
+Content-Disposition: form-data; name="thumbnail_from_page"; filename="test/resources/Test-Logo-Small-Black-transparent-1.png"
+Content-type: image/png
+
+< ./test/resources/Test-Logo-Small-Black-transparent-1.png
+--WeE843erSADF32Sdsa0329r0easfd
+Content-Disposition: form-data; name="thumbnail_processed"; filename="test/resources/Test-Logo-Small-Black-transparent-1.png"
+Content-type: image/png
+
+< ./test/resources/Test-Logo-Small-Black-transparent-1.png
+--WeE843erSADF32Sdsa0329r0easfd
+
+###
+
+
+# should not allow simple hacks with the path of files
+PUT {{submissionUrl}}/fetch/thumbnails
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data;boundary="WeE843erSADF32Sdsa0329r0easfd"
+
+--WeE843erSADF32Sdsa0329r0easfd
+Content-Disposition: form-data; name="thumbnail_from_page"; filename="/etc/password"
+Content-type: image/jpg
+
+< ./test/resources/placeholder-400.jpg
+--WeE843erSADF32Sdsa0329r0easfd
+###
+
+# should not allow simple hacks with the field names
+PUT {{submissionUrl}}/fetch/thumbnails
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data;boundary="WeE843erSADF32Sdsa0329r0easfd"
+
+--WeE843erSADF32Sdsa0329r0easfd
+Content-Disposition: form-data; name="thumbnail_not_defined"; filename="placeholder-400.png"
+Content-type: image/jpg
+
+< ./test/resources/placeholder-400.jpg
+--WeE843erSADF32Sdsa0329r0easfd
+###
+

@@ -1,5 +1,6 @@
 {
   "python.pythonPath": ".venv/bin/python3",
+  "python.envFile": "${workspaceFolder}/config.local.sh",
   "files.exclude": {
     "**/__pycache__": true,
     ".venv/**": true

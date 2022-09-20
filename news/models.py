@@ -6,7 +6,6 @@ import os
 from datetime import datetime
 from hashlib import sha1
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -67,7 +66,7 @@ class ModerationStatuses(models.TextChoices):
     REJECTED = "rejected", "Moderator rejected"
 
 
-class FetchStatuses(models.TextChoices):
+class RetrievalStatuses(models.TextChoices):
     """Lifecycle status"""
 
     PENDING = "pending", "Pending"
@@ -128,6 +127,7 @@ class Submission(models.Model):
                 return domain
             except ValueError:
                 pass
+        return ""
 
     def __str__(self):
         return f"{self.domain}({self.owner}:{self.id})"
@@ -147,7 +147,7 @@ def user_directory_path(instance, filename):
     return f"uploaded_images/{now}/{username}_{key}{extension}"
 
 
-class Fetch(models.Model):
+class Retrieval(models.Model):
     """
     Stores data obtained after fetching the URL and parsing it
     """
@@ -157,8 +157,8 @@ class Fetch(models.Model):
     )
     status = models.CharField(
         max_length=10,
-        choices=FetchStatuses.choices,
-        default=FetchStatuses.PENDING,
+        choices=RetrievalStatuses.choices,
+        default=RetrievalStatuses.PENDING,
         editable=True,
     )
     owner = models.ForeignKey(
@@ -173,20 +173,14 @@ class Fetch(models.Model):
     description = models.CharField(
         max_length=250, null=True, blank=True, default=None, editable=True
     )
-    thumbnail = models.CharField(
-        max_length=250, null=True, blank=True, default=None, editable=True
-    )
-    generated_thumbnail = models.CharField(
-        max_length=250, null=True, blank=True, default=None, editable=True
-    )
-    thumbnail_image = models.ImageField(
-        upload_to=user_directory_path, null=True, blank=True
-    )
+    thumbnail_submitted = models.ImageField(null=True, blank=True)
+    thumbnail_processed = models.ImageField(null=True, blank=True)
+    thumbnail_from_page = models.ImageField(null=True, blank=True)
 
     fetched_page = models.TextField(max_length=60 * 1024, blank=True, editable=True)
 
     def __str__(self):
-        return f"Fetch:{self.status}"
+        return f"Retrieval:{self.status}"
 
 
 class Analysis(models.Model):
@@ -303,20 +297,19 @@ def calculate_status(submission: Submission):
         if moderation.status == ModerationStatuses.ACCEPTED:
             set_status(submission, SubmissionStatuses.ACCEPTED)
             return
-        elif moderation.status == ModerationStatuses.REJECTED:
+        if moderation.status == ModerationStatuses.REJECTED:
             set_status(submission, SubmissionStatuses.REJECTED_MOD)
             return
-        else:
-            # set this as basis unless others have more detail
-            set_status(submission, SubmissionStatuses.PENDING)
+        # set this as basis unless others have more detail
+        set_status(submission, SubmissionStatuses.PENDING)
 
-    if hasattr(submission, "fetch"):
-        fetchobj: Fetch = submission.fetch
+    if hasattr(submission, "retrieval"):
+        retrieval: Retrieval = submission.retrieval
         # only rejections change the main status
-        if fetchobj.status == FetchStatuses.REJECTED_BANNED:
+        if retrieval.status == RetrievalStatuses.REJECTED_BANNED:
             set_status(submission, SubmissionStatuses.REJECTED_BANNED)
             return
-        elif fetchobj.status == FetchStatuses.REJECTED_ERROR:
+        if retrieval.status == RetrievalStatuses.REJECTED_ERROR:
             set_status(submission, SubmissionStatuses.REJECTED_FETCH)
             return
 
@@ -339,9 +332,9 @@ def moderation_changed(
     calculate_status(instance.submission)
 
 
-@receiver(post_save, sender=Fetch)
-def fetch_changed(
-    sender: Fetch,
+@receiver(post_save, sender=Retrieval)
+def retrieval_changed(
+    sender: Retrieval,
     instance=None,
     created=False,
     **kwargs,  # pylint: disable=unused-argument

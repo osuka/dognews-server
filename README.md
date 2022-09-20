@@ -7,15 +7,12 @@ implemented using Django 3 and django-rest-framework.
 
 > It's licensed under BSD, feel free to copy bits and parts and check the [Development notes](./DEV\ NOTES.md) for more details and a kind of technical blog. Although it's very specific, it may be tweaked to adjust your use case for a quick start.
 
-NOTE: Incompatibility between drf-extensions and django 3.1
-
-* Tracked in the [drf-extensions](https://github.com/chibisov/drf-extensions/issues/294)
-* Workaround until release:
-  * `pip3 install https://github.com/chibisov/drf-extensions/archive/master.zip`
-
 ## Quick commands
 
 ```sh
+
+# load local env (that we must create based on config.local.template)
+source config.local.sh
 
 # init a local sqlite database
 DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py migrate
@@ -30,13 +27,9 @@ DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py runserver
 open http://127.0.0.1:8000/adminpanel
 
 # browse the REST API
-open http://127.0.0.1:8000/swagger/
+http://localhost:8000/api/schema/swagger-ui/ to browse using the Swagger UI
 
-# browse the REST API (alternative view using redoc)
-open http://127.0.0.1:8000/redoc/
-
-# generate open api spec in yaml
-DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py generateschema > openapi-schema.yml
+You can also use the endpoint http://localhost:8000/api/schema to retrieve the [OpenAPI](https://www.openapis.org/) yaml to generate REST clients or you can do it from the command line with `DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py spectacular > openapi-schema.yml`
 ```
 
 ## Requirements
@@ -194,7 +187,7 @@ Filled on create:
 
 Filled by bots:
 
-* fetch: one to one related object with scraped data
+* retrieval: one to one related object with scraped data
 * analysis: one to one related object with sentiment analysis
 
 Filled by a moderator:
@@ -211,18 +204,18 @@ Filled by collaborators:
 A number of bots with specific tasks work on the items. Each bot is created
 as a user in the database, belonging to the group 'Bots'
 
-### Fetch bot
+### Retrieval bot
 
 Input
 
-* Submissions without a fetch association
+* Submissions without a retrieval association
 
 Action
 
 * if domain(url) in blacklist mark PosedItem as rejected: Blacklist
 * fetch url from the net
-* if fetched: create new item in ModerationQueue, mark fetch status as Fetched
-* if error: if error is temporary do nothing, else mark submission as rejected, mark fetch status as Failed
+* if fetched: create new item in ModerationQueue, mark retrieval status as Fetched
+* if error: if error is temporary do nothing, else mark submission as rejected, mark retrieval status as Failed
 
 ## Analysis bot
 
@@ -239,7 +232,7 @@ Action
 
 Input
 
-* Submissions with an fetch status of passed
+* Submissions with an retrieval status of passed
 
 Action
 
@@ -249,7 +242,7 @@ Action
 
 Input
 
-* Submissions with an fetch status of passed
+* Submissions with an retrieval status of passed
 
 Action
 

@@ -17,7 +17,7 @@ It supports node and python as those are the likely languages I'll use here.
 
 There's 2 or 3 files involved depending on whether we are launching the container locally or on a remote machine:
 
-1. [.devcontainer/Dockerfile](./.devcontainer/Dockerfile) - defines a base image in which the tools will be run (eg eslint, virtualenv, nvm)
+1. [.devcontainer/Dockerfile](./.devcontainer/Dockerfile) - defines a base image in which the tools will be run (eg eslint, nvm)
      This is shared by everybody, it doesn't have any local specific/dev specific information
      Visual Studio Code's extension Remote-Containers will launch a container using this
 

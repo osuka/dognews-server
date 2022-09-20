@@ -14,9 +14,7 @@
         "--noreload"
       ],
       "justMyCode": false,
-      "env": {
-        "DJANGO_SETTINGS_MODULE": "dognews.settings.local"
-      },
+      "envFile": "${workspaceFolder}/config.local.sh",
       "django": true
     },
     {

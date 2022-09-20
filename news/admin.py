@@ -2,16 +2,14 @@
 Minimal UI
 """
 
-from typing import Any
 from django import forms
+from django.contrib import admin
+from django.contrib.auth.models import Permission
 from django.forms.models import BaseInlineFormSet
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from django.http import HttpResponseRedirect
-from django.contrib import admin
-from django.contrib.admin.models import LogEntry, ContentType, CHANGE
-from django.contrib.auth.models import Permission
 from custom_admin_actions.admin import CustomActionsModelAdmin
+
 from . import models
 
 # pylint: disable=missing-module-docstring, missing-function-docstring, missing-class-docstring
@@ -31,11 +29,7 @@ def _preview(url):
 
 def link_to_submission(submission: models.Submission):
     return reverse(
-        "admin:%s_%s_change"
-        % (
-            models.Submission._meta.app_label,
-            models.Submission._meta.model_name,
-        ),
+        f"admin:{models.Submission._meta.app_label}_{models.Submission._meta.model_name}_change",
         args=(submission.pk,),
         current_app=admin.site.name,
     )
@@ -124,21 +118,21 @@ class PermissionAdmin(admin.ModelAdmin):
     list_filter = ["content_type__app_label", "content_type__model"]
 
 
-class FetchInline(SavesOwnerMixin, admin.StackedInline):
-    model = models.Fetch
+class RetrievalInline(SavesOwnerMixin, admin.StackedInline):
+    model = models.Retrieval
     fields = (
         "status",
         "title",
         "description",
         (
-            "thumbnail",
-            "thumbnail_preview",
+            "thumbnail_submitted",
+            "thumbnail_submitted_preview",
         ),
         (
-            "generated_thumbnail",
-            "generated_thumbnail_preview",
-            "thumbnail_image",
-            "thumbnail_image_preview",
+            "thumbnail_processed",
+            "thumbnail_processed_preview",
+            "thumbnail_from_page",
+            "thumbnail_from_page_preview",
         ),
         "fetched_page",
         ("last_updated", "date_created", "owner"),
@@ -149,9 +143,10 @@ class FetchInline(SavesOwnerMixin, admin.StackedInline):
             "title",
             "description",
             "thumbnail",
-            "thumbnail_preview",
-            "generated_thumbnail_preview",
-            "thumbnail_image_preview",
+            "thumbnail_processed",
+            "thumbnail_processed_preview",
+            "thumbnail_submitted_preview",
+            "thumbnail_from_page_preview",
             "last_updated",
             "date_created",
             "owner",
@@ -161,20 +156,21 @@ class FetchInline(SavesOwnerMixin, admin.StackedInline):
             readonly_fields += "status"
         return readonly_fields
 
-    def thumbnail_preview(self, obj):
-        return _preview(obj.thumbnail)
+    def thumbnail_processed_preview(self, obj: models.Retrieval):
+        return _preview(obj.thumbnail_processed)
 
-    def generated_thumbnail_preview(self, obj):
-        return _preview(obj.generated_thumbnail)
+    def thumbnail_from_page_preview(self, obj: models.Retrieval):
+        return _preview(obj.thumbnail_from_page)
 
-    def thumbnail_image_preview(self, obj):
-        return mark_safe(
-            '<img src="{url}" width="{width}" height={height} />'.format(
-                url=obj.thumbnail_image.url,
-                width=obj.thumbnail_image.width,
-                height=obj.thumbnail_image.height,
+    def thumbnail_submitted_preview(self, obj: models.Retrieval):
+        try:
+            # will fail if image is not there or there is a connection error
+            return mark_safe(
+                f"""<img src="{obj.thumbnail_submitted.url}" width="{obj.thumbnail_submitted.width}"
+                height={obj.thumbnail_submitted.height} />"""
             )
-        )
+        except Exception as e:
+            return e.msg
 
 
 class AnalysisInline(SavesOwnerMixin, admin.StackedInline):
@@ -239,7 +235,7 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
         "title",
         "target_url",
         "status",
-        "fetch",
+        "retrieval",
         "moderation",
         "preview",
     ]
@@ -247,7 +243,7 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
     list_filter = [
         "status",
         "moderation__status",
-        "fetch__status",
+        "retrieval__status",
         "date",
         "date_created",
         "last_updated",
@@ -255,7 +251,9 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
     ]
     search_fields = ["target_url", "title", "description", "owner__username"]
     list_display_links = ["last_updated", "target_url", "title"]
-    inlines = [FetchInline, AnalysisInline, ModerationInline, VoteInline]
+    inlines = [RetrievalInline, AnalysisInline, ModerationInline, VoteInline]
+    title = forms.CharField(widget=forms.Textarea(attrs={"cols": 120, "rows": 2}))
+    description = forms.CharField(widget=forms.Textarea(attrs={"cols": 120, "rows": 4}))
 
     @admin.display(description="Moderator")
     def _moderator(self, obj: models.Submission):
@@ -264,9 +262,14 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
         return "-"
 
     @admin.display(description="Preview")
-    def preview(self, obj):
-        if hasattr(obj, "fetch"):
-            return _preview(obj.fetch.generated_thumbnail)
+    def preview(self, obj: models.Submission):
+        retrieval: models.Retrieval = obj.retrieval
+        if hasattr(obj, "retrieval"):
+            return _preview(
+                retrieval.thumbnail_processed
+                or retrieval.thumbnail_submitted
+                or retrieval.thumbnail_from_page
+            )
         return "-"
 
     def get_readonly_fields(self, request, obj: models.Submission = None):
@@ -275,6 +278,7 @@ class SubmissionAdmin(SavesOwnerMixin, CustomActionsModelAdmin):
             readonly_fields += "owner"
         return readonly_fields
 
+    # pylint: disable=too-many-arguments
     def get_custom_admin_actions(
         self,
         request,
