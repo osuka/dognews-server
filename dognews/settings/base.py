@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",  # <-- added, to expose rest api
-    "rest_framework.authtoken",  # enable token authentication
+    # "rest_framework.authtoken",  # enable token authentication
     "django_filters",  # to allow filtering on rest framework API
     "custom_admin_actions",  # additional row of actions for ModelAdmins
     "news",
@@ -192,7 +192,7 @@ ADMIN_REORDER = {
             "app": "auth",
             "label": "Authentication and Authorisation",
             "models": (
-                "authtoken.TokenProxy",
+                # "authtoken.TokenProxy",
                 "dogauth.User",
                 "auth.Group",
                 "auth.Permission",

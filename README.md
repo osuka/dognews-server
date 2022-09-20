@@ -3,7 +3,7 @@
 This project is the backend server for the Only Dog News web site and application.
 
 *This is a work in progress and a personal playground project*, currently
-implemented using Django 3 and django-rest-framework.
+implemented using Django 4 and django-rest-framework.
 
 > It's licensed under BSD, feel free to copy bits and parts and check the [Development notes](./DEV\ NOTES.md) for more details and a kind of technical blog. Although it's very specific, it may be tweaked to adjust your use case for a quick start.
 
@@ -28,13 +28,17 @@ open http://127.0.0.1:8000/adminpanel
 
 # browse the REST API
 http://localhost:8000/api/schema/swagger-ui/ to browse using the Swagger UI
+```
 
-You can also use the endpoint http://localhost:8000/api/schema to retrieve the [OpenAPI](https://www.openapis.org/) yaml to generate REST clients or you can do it from the command line with `DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py spectacular > openapi-schema.yml`
+You can also use the endpoint http://localhost:8000/api/schema to retrieve the [OpenAPI](https://www.openapis.org/) yaml to generate REST clients or you can do it from the command line with
+
+```sh
+DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py spectacular > openapi-schema.yml
 ```
 
 ## Requirements
 
-This is a server to support 'Only dog news, a very simple news aggregator for me and my friends.
+This is a server to support 'Only dog news', a very simple news aggregator for me and my friends.
 
 The site holds 'happy dog news' curated by humans, since automated solutions render too many false positives (in particular, many stories are horrible and many sources are very spammy).
 
@@ -83,7 +87,7 @@ Holds information on the url, title, description, who submitted it and a status.
 
 Posted items are processed by a bot that fetches the text from the web and
 stores a copy of the source html. This will fail to scan text when it is
-dynamically loaded via javascript. In those cases we will rely ono the
+dynamically loaded via javascript. In those cases we will rely on the
 submitted header/description, or on a moderator adding it.
 
 Other bots will parse the fetched text and extract automatic information like

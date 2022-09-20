@@ -9,7 +9,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from rest_framework.authtoken.models import Token
+
+# from rest_framework.authtoken.models import Token
 import tldextract
 from dogauth.models import User
 
@@ -33,18 +34,18 @@ from dogauth.models import User
 #               null (None when read)
 
 
-@receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def create_auth_token(
-    sender, instance=None, created=False, **kwargs  # pylint: disable=unused-argument
-):
-    """
-    Create an associated auth token for any created user.
-    We are using Token authentication - the Tokens are created on user
-    creation, by listening to the post+save event on the user model
-    https://www.django-rest-framework.org/api-guide/authentication/#tokenauthentication
-    """
-    if created:
-        Token.objects.create(user=instance)
+# @receiver(post_save, sender=settings.AUTH_USER_MODEL)
+# def create_auth_token(
+#     sender, instance=None, created=False, **kwargs  # pylint: disable=unused-argument
+# ):
+#     """
+#     Create an associated auth token for any created user.
+#     We are using Token authentication - the Tokens are created on user
+#     creation, by listening to the post+save event on the user model
+#     https://www.django-rest-framework.org/api-guide/authentication/#tokenauthentication
+#     """
+#     if created:
+#         Token.objects.create(user=instance)
 
 
 class SubmissionStatuses(models.TextChoices):

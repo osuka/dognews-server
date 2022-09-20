@@ -336,7 +336,7 @@ Some notes on ipython:
 ```bash
 sudo apt install -y graphviz
 pip install pydotplus
-./manage.py graph_models -a -g -o models.png
+DJANGO_SETTINGS_MODULE=dognews.settings.local ./manage.py graph_models -a -g -o models.png
 ```
 
 You can see the result here:

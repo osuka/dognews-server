@@ -18,7 +18,8 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, re_path
 from django.urls import include
-from rest_framework.authtoken import views as authviews
+
+# from rest_framework.authtoken import views as authviews##
 from rest_framework.routers import SimpleRouter
 from drf_spectacular.views import (
     SpectacularAPIView,

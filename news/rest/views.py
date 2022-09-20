@@ -232,7 +232,7 @@ class RetrievalThumbnailUploadView(GenericAPIView):
     ## example
     ```
     PUT {{submissionUrl}}/fetch/thumbnails
-    Authorization: Token {{authToken}}
+    Authorization: Bearer {{JWT_ACCESS_TOKEN}}
     Content-Type: multipart/form-data;boundary="WeE843erSADF32Sdsa0329r0easfd"
 
     --WeE843erSADF32Sdsa0329r0easfd
